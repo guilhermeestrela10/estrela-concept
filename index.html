@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4a4b2">
+  <meta name="description" content="Estrela Concept: moda fitness e peças escolhidas para você brilhar no seu ritmo.">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>Estrela Concept — Seu estilo, seu brilho</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <div class="announcement">Seu estilo, seu brilho <span aria-hidden="true">✦</span> Curadoria Estrela Concept</div>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Estrela Concept — início">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M31 4v56M4 31h56M11 11l42 42M53 11 11 53M22 5l9 26 10-20M5 22l26 9-20 10M59 22l-28 9 20 10"/></svg></span>
+      <span class="brand-name">estrela <b>concept</b></span>
+    </a>
+    <nav class="main-nav" aria-label="Navegação principal">
+      <a href="#colecao">Coleção</a><a href="#sobre">A marca</a><a href="#contato">Contato</a><a href="/admin">Painel</a>
+    </nav>
+    <button class="cart-trigger" id="cart-open" aria-label="Abrir carrinho">Sacola <span id="cart-count">0</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1 13H6L5 8Zm4 0V6a3 3 0 0 1 6 0v2"/></svg></button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><span></span> MOVIMENTO COM PERSONALIDADE</p>
+        <h1>Seu ritmo.<br><em>Seu brilho.</em></h1>
+        <p class="hero-text">Peças que acompanham você em todos os movimentos — e em cada versão de si mesma.</p>
+        <a class="button button-dark" href="#colecao">Descubra a coleção <span aria-hidden="true">↗</span></a>
+        <div class="hero-note"><span>✳</span><p>Escolhas especiais<br><small>para iluminar sua rotina</small></p></div>
+      </div>
+      <div class="hero-art" role="img" aria-label="Mulher usando roupa fitness em um ambiente de treino">
+        <div class="hero-image"></div><div class="hero-stamp"><span>ESTRELA</span><b>✳</b><span>SEU ESTILO, SEU BRILHO</span></div>
+        <div class="hero-caption">ENERGIA QUE<br><em>VAI COM VOCÊ</em></div>
+      </div>
+      <div class="hero-bottom"><span>01 — MOVA-SE COMO VOCÊ</span><span>DESCUBRA SEU PRÓXIMO FAVORITO ↓</span></div>
+    </section>
+
+    <section class="intro" id="sobre">
+      <p class="eyebrow">FEITA PARA A SUA ROTINA</p>
+      <p>Mais do que vestir, <em>sentir-se bem.</em><br>Uma curadoria para acompanhar o que faz você brilhar.</p>
+    </section>
+
+    <section class="collection section-wrap" id="colecao">
+      <div class="section-heading">
+        <div><p class="eyebrow">ESTRELA CONCEPT · SELEÇÃO 01</p><h2>Encontre seu <em>movimento</em></h2></div>
+        <p class="section-aside">Moda fitness para treinar,<br>viver e ser você.</p>
+      </div>
+      <div class="shop-toolbar">
+        <label class="search-box"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><input id="search" type="search" placeholder="Buscar peças" aria-label="Buscar produtos pelo nome"></label>
+        <label class="filter-label">Categoria <select id="category"><option value="">Todas as peças</option></select></label>
+        <label class="filter-label">Tamanho <select id="size"><option value="">Todos</option><option>P</option><option>M</option><option>G</option></select></label>
+        <label class="filter-label">Preço <select id="price"><option value="">Qualquer valor</option><option value="100">Até R$ 100</option><option value="150">Até R$ 150</option><option value="200">Até R$ 200</option></select></label>
+      </div>
+      <div class="results-line"><span id="result-count">Carregando coleção…</span><span>PEÇAS SELECIONADAS <i>✳</i></span></div>
+      <div class="product-grid" id="product-grid" aria-live="polite"></div>
+      <p class="empty-state" id="empty-state" hidden>Nenhuma peça encontrada. Experimente limpar os filtros.</p>
+    </section>
+
+    <section class="brand-note">
+      <div class="note-symbol">✳</div><p>Vista o que te faz sentir <em>bem.</em></p><span>ESTRELA CONCEPT · SEU ESTILO, SEU BRILHO</span>
+    </section>
+    <section class="contact section-wrap" id="contato"><div><p class="eyebrow">FICOU COM DÚVIDA?</p><h2>Estamos por <em>aqui.</em></h2><p>Chame a gente para conversar sobre tamanhos, peças ou seu pedido.</p></div><a class="button button-light" id="contact-link" target="_blank" rel="noreferrer">Falar pelo WhatsApp <span>↗</span></a></section>
+  </main>
+
+  <footer><a class="brand brand-footer" href="/"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M31 4v56M4 31h56M11 11l42 42M53 11 11 53M22 5l9 26 10-20M5 22l26 9-20 10M59 22l-28 9 20 10"/></svg></span><span class="brand-name">estrela <b>concept</b></span></a><span>Seu estilo, seu brilho. <span class="footer-star">✳</span></span><small>© 2026 Estrela Concept · Catálogo de demonstração</small></footer>
+
+  <div class="overlay" id="overlay" hidden></div>
+  <aside class="cart-panel" id="cart-panel" aria-labelledby="cart-title" aria-modal="true" role="dialog" tabindex="-1" hidden>
+    <div class="cart-head"><div><p class="eyebrow">SUA SELEÇÃO</p><h2 id="cart-title">Sacola <em>Estrela</em></h2></div><button class="icon-button" id="cart-close" aria-label="Fechar carrinho">×</button></div>
+    <p class="cart-notice" id="cart-notice" role="status"></p>
+    <div class="cart-items" id="cart-items"></div>
+    <div class="cart-empty" id="cart-empty"><span>✳</span><p>Sua sacola está esperando<br>por algo especial.</p><button class="text-button" id="continue-shopping">Descobrir peças ↗</button></div>
+    <section class="order-success" id="order-success" hidden><span>✳</span><h3>Pedido registrado!</h3><p id="order-success-message"></p><a class="button button-dark checkout-button" id="whatsapp-order-link" target="_blank" rel="noreferrer">Conversar sobre o pedido no WhatsApp ↗</a></section>
+    <div class="cart-summary" id="cart-summary" hidden><div class="subtotal"><span>Subtotal</span><strong id="cart-subtotal">R$ 0,00</strong></div><p>Pagamento e frete são combinados pelo WhatsApp.</p><label class="checkout-field">Seu nome<input id="customer-name" autocomplete="name" maxlength="100" required></label><label class="checkout-field">Seu WhatsApp com DDD<input id="customer-phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="20" placeholder="(86) 99999-9836" required></label><button class="button button-dark checkout-button" id="checkout">Registrar pedido de demonstração <span>↗</span></button><a class="button button-light checkout-button" id="whatsapp-order-link" target="_blank" rel="noreferrer" hidden>Continuar no WhatsApp <span>↗</span></a><p class="checkout-message" id="checkout-message" role="status"></p></div>
+  </aside>
+
+  <dialog class="product-dialog" id="product-dialog" aria-label="Detalhes do produto"><button class="icon-button dialog-close" id="product-close" aria-label="Fechar detalhes">×</button><div id="product-detail"></div></dialog>
+</body>
+</html>

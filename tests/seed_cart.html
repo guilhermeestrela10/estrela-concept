@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Preparar cenário de teste</title>
+</head>
+<body>
+  <p id="status">Preparando cenário de teste…</p>
+  <script>
+    const scenario = new URLSearchParams(location.search).get("case");
+    const fixtures = {
+      malformed: "{broken-json",
+      removed: JSON.stringify([{ productId: "produto-removido", size: "M", color: "Preto", quantity: 1 }]),
+    };
+    if (!Object.hasOwn(fixtures, scenario)) {
+      document.querySelector("#status").textContent = "Use ?case=malformed ou ?case=removed.";
+    } else {
+      localStorage.setItem("estrela-cart", fixtures[scenario]);
+      location.replace("/#colecao");
+    }
+  </script>
+</body>
+</html>
