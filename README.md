@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+
 # Estrela Concept
 
 Loja responsiva da Estrela Concept com catálogo, filtros, sacola, registro de pedidos e painel administrativo. O pagamento, a entrega e as dúvidas são combinados pelo WhatsApp **+55 86 99926-9836**. Os produtos atuais são exemplos para teste.
@@ -52,4 +54,10 @@ Na pasta do projeto, execute `python -m unittest discover -s tests -v`. Os teste
 
 O banco está preparado no Supabase, mas a loja só se conecta depois de instalar a chave secreta na máquina/ambiente que executa o servidor. O app segue local até ser publicado. Para colocar no ar ainda faltam escolher/configurar hospedagem e domínio, ativar HTTPS, backups, e revisar autenticação para hospedagem com múltiplas instâncias. Pagamento, frete e entrega são combinados pelo WhatsApp; nenhum pagamento é cobrado no site.
 
-Troque produtos, fotos, estoque e conteúdo pelos dados aprovados pela loja. Preencha os dados legais e operacionais: identificação do fornecedor, endereço e contato, política de privacidade, regras de entrega e informações de troca/devolução. As regras devem refletir a operação real e ser revisadas com orientação adequada; o texto do site não substitui revisão jurídica.
+# Troque produtos, fotos, estoque e conteúdo pelos dados aprovados pela loja. Preencha os dados legais e operacionais: identificação do fornecedor, endereço e contato, política de privacidade, regras de entrega e informações de troca/devolução. As regras devem refletir a operação real e ser revisadas com orientação adequada; o texto do site não substitui revisão jurídica.
+
+# estrela-concept
+
+Sistema de gerenciamento de loja de roupas
+
+> > > > > > > origin/main
