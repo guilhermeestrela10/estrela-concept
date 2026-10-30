@@ -1,4 +1,4 @@
-"""SQLite authentication and Supabase-backed store data for Estrela Concept."""
+"""Local fallback store and Supabase-backed data/auth for Estrela Concept."""
 
 from __future__ import annotations
 
@@ -28,19 +28,25 @@ class SupabaseStore:
     url = "https://khxfjydzpltqgtuuagrm.supabase.co"
     publishable_key = "sb_publishable_IhLqps6ILjc2RmsEb9x4Kg_h-oSvS4E"
 
-    def __init__(self, token, auth_path):
+    def __init__(self, token):
         self.token = token
-        self.auth = Store(auth_path)
 
-    def admin_configured(self): return self.auth.admin_configured()
-    def setup_admin(self, username, password): return self.auth.setup_admin(username, password)
-    def verify_admin(self, username, password): return self.auth.verify_admin(username, password)
+    def admin_configured(self): return self._call("admin_status")["configured"]
+    def setup_admin(self, username, password): return self._call("admin_setup", username=username, password=password)
+    def admin_login(self, username, password): return self._call("admin_login", username=username, password=password)
+    def admin_session_valid(self, session_token):
+        return bool(self._call("admin_session", sessionToken=session_token)["authenticated"])
+    def admin_logout(self, session_token): self._call("admin_logout", sessionToken=session_token)
+    def admin_products(self, session_token): return self._call("admin_products", sessionToken=session_token)["products"]
+    def admin_categories(self, session_token): return self._call("admin_categories", sessionToken=session_token)["categories"]
+    def admin_orders(self, session_token): return self._call("orders", sessionToken=session_token)["orders"]
 
     @classmethod
-    def configured(cls, auth_path):
+    def configured(cls):
         token_file = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "Estrela Concept" / "edge_api.key"
         token = token_file.read_text(encoding="utf-8").strip() if token_file.is_file() else ""
-        return cls(token, auth_path) if len(token) >= 40 else None
+        token = os.environ.get("ESTRELA_EDGE_API_TOKEN", token)
+        return cls(token) if len(token) >= 40 else None
 
     def _call(self, action, **payload):
         data = json.dumps({"action": action, **payload}, ensure_ascii=False).encode()
@@ -60,34 +66,34 @@ class SupabaseStore:
         except (urllib.error.URLError, TimeoutError) as error:
             raise ValueError("Não foi possível conectar ao Supabase.") from error
 
-    def categories(self): return self._call("admin_categories")["categories"]
-    def products(self, include_inactive=False):
+    def categories(self): return self._call("categories")["categories"]
+    def products(self, include_inactive=False, session_token=None):
         action = "admin_products" if include_inactive else "products"
-        return self._call(action)["products"]
+        return self._call(action, sessionToken=session_token if include_inactive else None)["products"]
 
-    def save_product(self, product):
+    def save_product(self, product, session_token=None):
         Store._validate_product(product)
-        return self._call("save_product", product=product)["product"]
-    def set_product_active(self, product_id, active):
-        self._call("set_product_active", id=product_id, active=bool(active))
-    def save_category(self, name):
+        return self._call("save_product", product=product, sessionToken=session_token)["product"]
+    def set_product_active(self, product_id, active, session_token=None):
+        self._call("set_product_active", id=product_id, active=bool(active), sessionToken=session_token)
+    def save_category(self, name, session_token=None):
         if not isinstance(name,str) or not name.strip() or len(name.strip())>60: raise ValueError("O nome da categoria deve ter entre 1 e 60 caracteres.")
         name=name.strip(); category_id=_slug(name)
         if not category_id: raise ValueError("Informe um nome de categoria válido.")
-        return self._call("save_category", category={"id":category_id,"name":name,"active":True})["category"]
+        return self._call("save_category", category={"id":category_id,"name":name,"active":True}, sessionToken=session_token)["category"]
     def create_order(self, customer, items):
         if not isinstance(customer,dict): raise ValueError("Informe os dados do cliente.")
         name,phone=customer.get("name"),re.sub(r"\D","",str(customer.get("phone","")))
         if not isinstance(name,str) or not name.strip() or len(name.strip())>100: raise ValueError("Informe seu nome (até 100 caracteres).")
         if not 10<=len(phone)<=13: raise ValueError("Informe um WhatsApp válido com DDD.")
         return self._call("checkout", customer={"name":name.strip(),"phone":phone}, items=items)
-    def orders(self):
-        return self._call("orders")["orders"]
-    def update_order_status(self, order_id, status):
+    def orders(self, session_token=None):
+        return self._call("orders", sessionToken=session_token)["orders"]
+    def update_order_status(self, order_id, status, session_token=None):
         if status not in STATUSES: raise ValueError("Status de pedido inválido.")
-        self._call("update_order_status", id=order_id, status=status)
-    def summary(self):
-        return self._call("summary")
+        self._call("update_order_status", id=order_id, status=status, sessionToken=session_token)
+    def summary(self, session_token=None):
+        return self._call("summary", sessionToken=session_token)
 
 
 def _slug(value: str) -> str:

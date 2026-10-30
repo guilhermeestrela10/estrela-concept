@@ -33,7 +33,15 @@ const grid = document.querySelector("#product-grid");
 const dialog = document.querySelector("#product-dialog");
 const cartPanel = document.querySelector("#cart-panel");
 const overlay = document.querySelector("#overlay");
+const menuTrigger = document.querySelector("#menu-trigger");
+const mainNav = document.querySelector("#main-nav");
 let cartReturnFocus = null;
+
+function setMenuOpen(open) {
+  mainNav.classList.toggle("is-open", open);
+  menuTrigger.setAttribute("aria-expanded", String(open));
+  menuTrigger.setAttribute("aria-label", open ? "Fechar menu" : "Abrir menu");
+}
 
 function availableVariants(product) { return product.variants.filter(item => item.active && item.stock > 0); }
 function imageFor(product) { return safeImageUrl(product.image); }
@@ -222,7 +230,14 @@ document.querySelector("#checkout").addEventListener("click", async () => {
   } catch (error) { message.textContent = error.message; }
   finally { button.disabled = false; }
 });
-document.querySelector("#contact-link").href = whatsappUrl("Olá! Vim pelo site da Estrela Concept e gostaria de tirar uma dúvida.");
+document.querySelector("#contact-link").href = whatsappUrl("Olá! Vim pelo site da Estrela Concept e gostaria de falar sobre produtos, pagamento, entrega, troca ou devolução.");
+menuTrigger.addEventListener("click", () => setMenuOpen(menuTrigger.getAttribute("aria-expanded") !== "true"));
+mainNav.addEventListener("click", event => { if (event.target.closest("a")) setMenuOpen(false); });
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && menuTrigger.getAttribute("aria-expanded") === "true") {
+    setMenuOpen(false); menuTrigger.focus();
+  }
+});
 
 async function start() {
   try {

@@ -14,12 +14,11 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from store import Store, SupabaseStore
+from store import SupabaseStore
 
 ROOT = Path(__file__).resolve().parent
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8000"))
-DB_PATH = Path(os.environ.get("ESTRELA_DB_PATH", ROOT / "data" / "estrela.sqlite3"))
 ADMIN_SETUP_TOKEN = os.environ.get("ESTRELA_ADMIN_SETUP_TOKEN", "")
 
 
@@ -30,10 +29,13 @@ class StoreHandler(SimpleHTTPRequestHandler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
+        self.current_admin_token = None
 
     def get_store(self):
         if self.__class__.store is None:
-            self.__class__.store = SupabaseStore.configured(DB_PATH) or Store(DB_PATH)
+            self.__class__.store = SupabaseStore.configured()
+            if self.__class__.store is None:
+                raise ValueError("Configure ESTRELA_EDGE_API_TOKEN para conectar ao Supabase.")
         return self.__class__.store
 
     def end_headers(self) -> None:
@@ -57,6 +59,11 @@ class StoreHandler(SimpleHTTPRequestHandler):
     def admin_session(self):
         cookie = SimpleCookie(self.headers.get("Cookie", ""))
         token = cookie.get("estrela_admin")
+        store = self.get_store()
+        if isinstance(store, SupabaseStore):
+            if not token:
+                return None
+            return token.value if store.admin_session_valid(token.value) else None
         session = self.__class__.sessions.get(token.value) if token else None
         if session and session["expires"] > time.monotonic():
             return token.value
@@ -66,20 +73,35 @@ class StoreHandler(SimpleHTTPRequestHandler):
 
     def local_setup_allowed(self):
         try:
-            return HOST in {"127.0.0.1", "::1", "localhost"} and self.client_address[0] in {"127.0.0.1", "::1"}
+            forwarded = self.headers.get("CF-Connecting-IP") or self.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+            return HOST in {"127.0.0.1", "::1", "localhost"} and self.client_address[0] in {"127.0.0.1", "::1"} and not forwarded
         except (IndexError, TypeError):
             return False
+
+    def client_ip(self):
+        return self.headers.get("CF-Connecting-IP") or self.client_address[0]
 
     def require_admin(self):
         if not self.origin_is_same():
             self.send_json({"error": "Origem da solicitação não permitida."}, 403)
             return False
-        if not self.admin_session():
+        token = self.admin_session()
+        if not token:
             self.send_json({"error": "Entre no painel para continuar."}, 401)
             return False
+        self.current_admin_token = token
         return True
 
-    def create_admin_session(self):
+    def admin_call(self, method, *args, **kwargs):
+        store = self.get_store()
+        if isinstance(store, SupabaseStore):
+            kwargs["session_token"] = self.current_admin_token
+        return getattr(store, method)(*args, **kwargs)
+
+    def create_admin_session(self, token=None):
+        if token:
+            secure = urlparse(self.headers.get("Origin", "")).scheme == "https"
+            return f"estrela_admin={token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=28800" + ("; Secure" if secure else "")
         token = secrets.token_urlsafe(32)
         self.__class__.sessions[token] = {"expires": time.monotonic() + 8 * 60 * 60}
         secure = urlparse(self.headers.get("Origin", "")).scheme == "https"
@@ -111,16 +133,16 @@ class StoreHandler(SimpleHTTPRequestHandler):
             self.send_json({"categories": [item for item in self.get_store().categories() if item["active"]]})
             return
         if path == "/api/admin/summary":
-            self.send_json(self.get_store().summary())
+            self.send_json(self.admin_call("summary"))
             return
         if path == "/api/admin/products":
-            self.send_json({"products": self.get_store().products(include_inactive=True)})
+            self.send_json({"products": self.admin_call("products", include_inactive=True) if isinstance(self.get_store(), SupabaseStore) else self.get_store().products(include_inactive=True)})
             return
         if path == "/api/admin/categories":
-            self.send_json({"categories": self.get_store().categories()})
+            self.send_json({"categories": self.admin_call("admin_categories") if isinstance(self.get_store(), SupabaseStore) else self.get_store().categories()})
             return
         if path == "/api/admin/orders":
-            self.send_json({"orders": self.get_store().orders()})
+            self.send_json({"orders": self.admin_call("admin_orders") if isinstance(self.get_store(), SupabaseStore) else self.get_store().orders()})
             return
         if path == "/admin":
             self.path = "/admin.html"
@@ -164,31 +186,53 @@ class StoreHandler(SimpleHTTPRequestHandler):
                 if not self.local_setup_allowed() and (not ADMIN_SETUP_TOKEN or not hmac.compare_digest(str(payload.get("setupToken", "")), ADMIN_SETUP_TOKEN)):
                     self.send_json({"error": "A configuração inicial exige autorização local ou o token de configuração."}, 403)
                     return
-                store.setup_admin(payload.get("username"), payload.get("password"))
-                self.send_json({"ok": True}, 201, {"Set-Cookie": self.create_admin_session()})
+                if isinstance(store, SupabaseStore):
+                    setup = store.setup_admin(payload.get("username"), payload.get("password"))
+                    cookie = self.create_admin_session(setup["sessionToken"])
+                else:
+                    store.setup_admin(payload.get("username"), payload.get("password"))
+                    cookie = self.create_admin_session()
+                self.send_json({"ok": True}, 201, {"Set-Cookie": cookie})
                 return
             if path == "/api/admin/login":
-                if not self.get_store().admin_configured():
+                store = self.get_store()
+                if not store.admin_configured():
                     self.send_json({"error": "Configure o acesso administrativo antes de entrar."}, 409)
                     return
-                attempts = self.__class__.login_attempts[self.client_address[0]]
+                attempts = self.__class__.login_attempts[self.client_ip()]
                 now = time.monotonic()
                 while attempts and now - attempts[0] > 300:
                     attempts.popleft()
                 if len(attempts) >= 5:
                     self.send_json({"error": "Muitas tentativas. Aguarde 5 minutos antes de tentar novamente."}, 429)
                     return
-                if not self.get_store().verify_admin(payload.get("username"), payload.get("password")):
-                    attempts.append(now)
-                    self.send_json({"error": "Usuário ou senha incorretos."}, 401)
-                    return
+                if isinstance(store, SupabaseStore):
+                    try:
+                        login = store.admin_login(payload.get("username"), payload.get("password"))
+                    except ValueError:
+                        login = None
+                    if not login:
+                        attempts.append(now)
+                        self.send_json({"error": "Usuário ou senha incorretos."}, 401)
+                        return
+                    cookie = self.create_admin_session(login["sessionToken"])
+                else:
+                    if not store.verify_admin(payload.get("username"), payload.get("password")):
+                        attempts.append(now)
+                        self.send_json({"error": "Usuário ou senha incorretos."}, 401)
+                        return
+                    cookie = self.create_admin_session()
                 attempts.clear()
-                self.send_json({"ok": True}, 200, {"Set-Cookie": self.create_admin_session()})
+                self.send_json({"ok": True}, 200, {"Set-Cookie": cookie})
                 return
             if path == "/api/admin/logout":
-                token = self.admin_session()
-                if token:
-                    self.__class__.sessions.pop(token, None)
+                cookie = SimpleCookie(self.headers.get("Cookie", ""))
+                token = cookie.get("estrela_admin")
+                store = self.get_store()
+                if token and isinstance(store, SupabaseStore):
+                    store.admin_logout(token.value)
+                elif token:
+                    self.__class__.sessions.pop(token.value, None)
                 self.send_json({"ok": True}, 200, {"Set-Cookie": "estrela_admin=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0"})
                 return
             if path.startswith("/api/admin/") and not self.require_admin():
@@ -197,10 +241,10 @@ class StoreHandler(SimpleHTTPRequestHandler):
                 order = self.get_store().create_order(payload.get("customer"), payload.get("items"))
                 self.send_json({"ok": True, **order, "message": "Pedido registrado."})
             elif path == "/api/admin/products":
-                product = self.get_store().save_product(payload)
+                product = self.admin_call("save_product", payload)
                 self.send_json({"product": product}, 201)
             elif path == "/api/admin/categories":
-                category = self.get_store().save_category(payload.get("name"))
+                category = self.admin_call("save_category", payload.get("name"))
                 self.send_json({"category": category}, 201)
             else:
                 self.send_json({"error": "Endpoint não encontrado."}, 404)
@@ -217,7 +261,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
         try:
             payload = self.read_json()
             payload["id"] = parts[3]
-            self.send_json({"product": self.get_store().save_product(payload)})
+            self.send_json({"product": self.admin_call("save_product", payload)})
         except (ValueError, TypeError, json.JSONDecodeError) as error:
             self.send_json({"error": str(error)}, 400)
 
@@ -228,10 +272,10 @@ class StoreHandler(SimpleHTTPRequestHandler):
         try:
             payload = self.read_json()
             if len(parts) == 4 and parts[:3] == ["api", "admin", "orders"]:
-                self.get_store().update_order_status(parts[3], payload.get("status"))
+                self.admin_call("update_order_status", parts[3], payload.get("status"))
                 self.send_json({"ok": True})
             elif len(parts) == 4 and parts[:3] == ["api", "admin", "products"]:
-                self.get_store().set_product_active(parts[3], payload.get("active") is True)
+                self.admin_call("set_product_active", parts[3], payload.get("active") is True)
                 self.send_json({"ok": True})
             else:
                 self.send_json({"error": "Endpoint não encontrado."}, 404)

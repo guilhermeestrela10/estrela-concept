@@ -315,12 +315,32 @@ as $$
   select exists (select 1 from public.edge_api_tokens where id and token_hash = p_token_hash)
 $$;
 
-revoke all on function public.checkout_create_order(text,text,jsonb) from public, authenticated;
-grant execute on function public.checkout_create_order(text,text,jsonb) to anon, service_role;
+revoke all on function public.checkout_create_order(text,text,jsonb) from public, anon, authenticated;
+grant execute on function public.checkout_create_order(text,text,jsonb) to service_role;
 revoke all on function public.admin_save_product(jsonb) from public, anon, authenticated;
 grant execute on function public.admin_save_product(jsonb) to service_role;
 revoke all on function public.admin_update_order_status(uuid,text) from public, anon, authenticated;
 grant execute on function public.admin_update_order_status(uuid,text) to service_role;
+
+create table public.admin_accounts (
+    id boolean primary key default true check (id),
+    username text not null unique check (username ~ '^[A-Za-z0-9_-]{4,40}$'),
+    email text not null unique,
+    auth_user_id uuid not null unique references auth.users(id) on delete cascade,
+    created_at timestamptz not null default now()
+);
+
+create table public.admin_sessions (
+    token_hash text primary key check (token_hash ~ '^[a-f0-9]{64}$'),
+    user_id uuid not null references auth.users(id) on delete cascade,
+    expires_at timestamptz not null,
+    created_at timestamptz not null default now()
+);
+
+alter table public.admin_accounts enable row level security;
+alter table public.admin_sessions enable row level security;
+revoke all on public.admin_accounts, public.admin_sessions from public, anon, authenticated;
+grant select, insert, update, delete on public.admin_accounts, public.admin_sessions to service_role;
 revoke all on function public.edge_verify_token(text) from public, anon, authenticated;
 grant execute on function public.edge_verify_token(text) to service_role;
 

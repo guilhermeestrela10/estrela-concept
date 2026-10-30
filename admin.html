@@ -2,12 +2,12 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f0a5b2"><title>Painel · Estrela Concept</title>
-  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg"><link rel="stylesheet" href="/static/styles.css">
+  <meta name="theme-color" content="#DBA2AB"><title>Painel · Estrela Concept</title>
+  <link rel="icon" type="image/png" href="/static/brand-mark.png"><link rel="stylesheet" href="/static/styles.css">
   <script src="/static/admin.js" defer></script>
 </head>
 <body class="admin-page">
-  <header class="admin-header"><a class="brand" href="/"><span class="brand-mark" aria-hidden="true">✳</span><span class="brand-name">Estrela Concept</span></a><div class="admin-header-actions"><button class="button button-light" id="logout" hidden>Sair</button><a class="button button-light" href="/">← Voltar à loja</a></div></header>
+  <header class="admin-header"><a class="brand" href="/" aria-label="Estrela Concept — início"><img class="brand-logo" src="/static/brand-horizontal.png" alt="Estrela Concept"></a><div class="admin-header-actions"><button class="button button-light" id="logout" hidden>Sair</button><a class="button button-light" href="/">← Voltar à loja</a></div></header>
   <main class="admin-auth" id="admin-auth" hidden>
     <form id="auth-form"><p class="eyebrow">ESTRELA CONCEPT · ADMINISTRAÇÃO</p><h1 id="auth-title">Acesso ao painel</h1><p id="auth-description">Entre com seu usuário e senha.</p><label>Usuário<input name="username" autocomplete="username" value="login-admin" required maxlength="40"></label><label>Senha<input name="password" type="password" autocomplete="current-password" required minlength="12" maxlength="256"></label><label id="confirm-password-label" hidden>Confirme a senha<input name="confirmPassword" type="password" autocomplete="new-password" minlength="12" maxlength="256"></label><label id="setup-token-label" hidden>Token inicial de configuração<input name="setupToken" type="password" autocomplete="off"></label><p id="auth-error" class="form-error" role="alert"></p><button class="button button-dark" id="auth-submit">Entrar</button></form>
   </main>

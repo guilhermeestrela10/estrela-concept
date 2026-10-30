@@ -20,7 +20,7 @@ function showAuth(setup, tokenRequired = false, setupAllowed = true) {
   document.querySelector("#setup-token-label").hidden = !setup || !tokenRequired;
   document.querySelector("#auth-title").textContent = setup ? "Crie seu acesso" : "Acesso ao painel";
   document.querySelector("#auth-description").textContent = setup
-    ? "Crie a conta de administrador. A senha será guardada como hash neste computador. Use pelo menos 12 caracteres."
+    ? "Crie o acesso de administrador, protegido pelo Supabase Auth. Use pelo menos 12 caracteres."
     : "Entre com seu usuário e senha.";
   document.querySelector("#auth-submit").textContent = setup ? "Criar acesso e entrar" : "Entrar";
   document.querySelector("#auth-error").textContent = "";
@@ -36,10 +36,11 @@ function showAdmin() {
 function showError(error) { notice.textContent = error.message; notice.classList.add("error"); }
 function showMessage(message) { notice.textContent = message; notice.classList.remove("error"); }
 fetch("/api/status").then(response => response.json()).then(status => {
-  document.querySelector("#backend-label").textContent = status.backend === "supabase" ? "ESTRELA CONCEPT · SUPABASE ONLINE" : "ESTRELA CONCEPT · BANCO LOCAL";
-  document.querySelector("#backend-footnote").textContent = status.backend === "supabase"
+  const online = status.backend === "supabase";
+  document.querySelector("#backend-label").textContent = online ? "ESTRELA CONCEPT · SUPABASE ONLINE" : "ESTRELA CONCEPT · SUPABASE OFFLINE";
+  document.querySelector("#backend-footnote").textContent = online
     ? "Dados no Supabase. Os produtos do catálogo são exemplos editáveis."
-    : "Banco local ativo. Para usar o Supabase, execute python configure_supabase.py e reinicie o servidor. Os produtos do catálogo são exemplos editáveis.";
+    : status.error || "Configure a conexão segura com o Supabase no servidor.";
 }).catch(() => {});
 async function refresh() {
   notice.textContent = "Carregando dados…";

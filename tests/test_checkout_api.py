@@ -1,6 +1,7 @@
 """Regression tests for the local checkout API."""
 
 import json
+import os
 import threading
 import tempfile
 import time
@@ -126,11 +127,11 @@ class CheckoutApiTests(unittest.TestCase):
         self.assertEqual(summary["products"], 5)
         self.assertEqual(summary["orders"], 0)
 
-    def admin_request(self, path, method="GET", payload=None, cookie=None, origin=None):
+    def admin_request(self, path, method="GET", payload=None, cookie=None, origin=None, client_ip=None):
         data = json.dumps(payload).encode() if payload is not None else None
         request = Request(f"{self.base_url}{path}", data=data, method=method,
             headers={"Content-Type":"application/json", "Origin":origin or self.base_url,
-                **({"Cookie":cookie} if cookie else {})})
+                **({"Cookie":cookie} if cookie else {}), **({"CF-Connecting-IP":client_ip} if client_ip else {})})
         try:
             with urlopen(request, timeout=2) as response:
                 return response.status, json.load(response), response.headers.get("Set-Cookie")
@@ -148,6 +149,23 @@ class CheckoutApiTests(unittest.TestCase):
         session_status, session, _ = self.admin_request("/api/admin/session", cookie=cookie.split(";",1)[0])
         self.assertEqual(session_status, 200)
         self.assertTrue(session["authenticated"])
+
+    def test_store_api_fails_closed_when_supabase_is_not_configured(self):
+        previous_store = IsolatedStoreHandler.store
+        previous_token = os.environ.get("ESTRELA_EDGE_API_TOKEN")
+        IsolatedStoreHandler.store = None
+        os.environ["ESTRELA_EDGE_API_TOKEN"] = ""
+        try:
+            with self.assertRaises(HTTPError) as error:
+                urlopen(f"{self.base_url}/api/status", timeout=2)
+            self.assertEqual(error.exception.code, 503)
+            self.assertIn("Supabase", json.load(error.exception)["error"])
+        finally:
+            IsolatedStoreHandler.store = previous_store
+            if previous_token is None:
+                os.environ.pop("ESTRELA_EDGE_API_TOKEN", None)
+            else:
+                os.environ["ESTRELA_EDGE_API_TOKEN"] = previous_token
 
     def test_wrong_admin_password_is_rejected(self):
         self.admin_request("/api/admin/setup", "POST", {
@@ -190,6 +208,12 @@ class CheckoutApiTests(unittest.TestCase):
         status, _, _ = self.admin_request("/api/admin/setup", "POST", {
             "username":"login-admin", "password":"MinhaSenhaForte2026!"
         }, origin="https://attacker.example")
+        self.assertEqual(status, 403)
+
+    def test_admin_setup_rejects_requests_forwarded_from_public_proxy(self):
+        status, _, _ = self.admin_request("/api/admin/setup", "POST", {
+            "username":"login-admin", "password":"MinhaSenhaForte2026!"
+        }, client_ip="203.0.113.20")
         self.assertEqual(status, 403)
 
 

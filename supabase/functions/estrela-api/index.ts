@@ -3,7 +3,12 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 const apiUrl = Deno.env.get("SUPABASE_URL")!;
 const secretKeys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "{}");
 const serviceKey = secretKeys.default ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const publishableKey = "sb_publishable_IhLqps6ILjc2RmsEb9x4Kg_h-oSvS4E";
 const headers = { "Content-Type": "application/json", "Cache-Control": "no-store" };
+
+class ApiError extends Error {
+  constructor(message: string, public status: number) { super(message); }
+}
 
 async function db(path: string, method = "GET", body?: unknown, prefer?: string) {
   if (!serviceKey) throw new Error("Supabase service key is unavailable.");
@@ -18,10 +23,79 @@ async function db(path: string, method = "GET", body?: unknown, prefer?: string)
   return data;
 }
 
+async function auth(path: string, method: string, body: unknown, key: string, accessToken?: string) {
+  const response = await fetch(`${apiUrl}/auth/v1/${path}`, {
+    method,
+    headers: { apikey: key, "Content-Type": "application/json", ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+    body: JSON.stringify(body),
+  });
+  const text = await response.text();
+  return { response, data: text ? JSON.parse(text) : null };
+}
+
 async function authorized(request: Request) {
   const tokenHash = request.headers.get("x-estrela-token-sha256") ?? "";
   if (!/^[a-f0-9]{64}$/.test(tokenHash)) return false;
   return await db("rpc/edge_verify_token", "POST", { p_token_hash: tokenHash }) === true;
+}
+
+async function sessionHash(token: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function validSession(token: unknown) {
+  if (typeof token !== "string" || token.length !== 64) return false;
+  const hash = await sessionHash(token);
+  const query = new URLSearchParams({ select: "user_id", token_hash: `eq.${hash}`, expires_at: `gt.${new Date().toISOString()}` });
+  const sessions = await db(`admin_sessions?${query}`);
+  if (!sessions.length) return false;
+  const accounts = await db(`admin_accounts?select=auth_user_id&id=eq.true&auth_user_id=eq.${sessions[0].user_id}`);
+  return accounts.length === 1;
+}
+
+function newSessionToken() {
+  return [...crypto.getRandomValues(new Uint8Array(32))].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function createAdmin(payload: any) {
+  const username = payload.username;
+  const password = payload.password;
+  if (typeof username !== "string" || !/^[A-Za-z0-9_-]{4,40}$/.test(username)) throw new ApiError("Nome de usuário inválido.", 400);
+  if (typeof password !== "string" || password.length < 12 || password.length > 256) throw new ApiError("Crie uma senha com pelo menos 12 caracteres.", 400);
+  if ((await db("admin_accounts?select=id")).length) throw new ApiError("A conta administrativa já está configurada.", 409);
+
+  const email = `${username.toLowerCase()}@estrela-concept.invalid`;
+  const created = await auth("admin/users", "POST", {
+    email, password, email_confirm: true, app_metadata: { role: "admin" }, user_metadata: { username },
+  }, serviceKey!, serviceKey!);
+  if (!created.response.ok) throw new ApiError("Não foi possível criar o acesso no Supabase Auth.", 400);
+  const userId = created.data.id;
+  try {
+    await db("admin_accounts", "POST", { id: true, username, email, auth_user_id: userId }, "return=minimal");
+  } catch (error) {
+    await auth(`admin/users/${userId}`, "DELETE", {}, serviceKey!, serviceKey!).catch(() => {});
+    throw error;
+  }
+  return { ok: true };
+}
+
+async function adminLogin(payload: any) {
+  const username = typeof payload.username === "string" ? payload.username : "";
+  const password = typeof payload.password === "string" ? payload.password : "";
+  const query = new URLSearchParams({ select: "email,auth_user_id", id: "eq.true", username: `eq.${username}` });
+  const accounts = await db(`admin_accounts?${query}`);
+  if (accounts.length !== 1) throw new ApiError("Usuário ou senha incorretos.", 401);
+
+  const signedIn = await auth("token?grant_type=password", "POST", { email: accounts[0].email, password }, publishableKey);
+  if (!signedIn.response.ok || signedIn.data.user?.id !== accounts[0].auth_user_id
+      || signedIn.data.user?.app_metadata?.role !== "admin") throw new ApiError("Usuário ou senha incorretos.", 401);
+
+  const token = newSessionToken();
+  const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
+  await db("admin_sessions", "POST", { token_hash: await sessionHash(token), user_id: accounts[0].auth_user_id, expires_at: expiresAt }, "return=minimal");
+  await auth("logout", "POST", {}, publishableKey, signedIn.data.access_token).catch(() => {});
+  return { ok: true, sessionToken: token, expiresAt };
 }
 
 async function products(includeInactive = false) {
@@ -58,6 +132,19 @@ async function orders() {
 }
 
 async function handle(action: string, payload: any) {
+  if (action === "admin_status") return { configured: (await db("admin_accounts?select=id")).length > 0 };
+  if (action === "admin_setup") return await createAdmin(payload);
+  if (action === "admin_login") return await adminLogin(payload);
+  if (action === "admin_session") return { authenticated: await validSession(payload.sessionToken) };
+  if (action === "admin_logout") {
+    if (typeof payload.sessionToken === "string") {
+      await db(`admin_sessions?token_hash=eq.${await sessionHash(payload.sessionToken)}`, "DELETE");
+    }
+    return { ok: true };
+  }
+  const privateActions = new Set(["admin_products", "admin_categories", "orders", "summary", "save_product",
+    "save_category", "set_product_active", "update_order_status"]);
+  if (privateActions.has(action) && !await validSession(payload.sessionToken)) throw new ApiError("Entre no painel para continuar.", 401);
   if (action === "products") return { products: await products(false) };
   if (action === "admin_products") return { products: await products(true) };
   if (action === "categories") return { categories: (await categories(false)).filter((item: any) => item.active) };
@@ -98,7 +185,7 @@ async function handle(action: string, payload: any) {
     await db("rpc/admin_update_order_status", "POST", { p_order_id: payload.id, p_status: payload.status });
     return { ok: true };
   }
-  throw new Error("Ação não encontrada.");
+  throw new ApiError("Ação não encontrada.", 404);
 }
 
 Deno.serve(async (request: Request) => {
@@ -109,7 +196,7 @@ Deno.serve(async (request: Request) => {
     const result = await handle(payload.action, payload);
     return new Response(JSON.stringify(result), { status: 200, headers });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Request failed." }),
-      { status: 400, headers });
+    const status = error instanceof ApiError ? error.status : 500;
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Request failed." }), { status, headers });
   }
 });
