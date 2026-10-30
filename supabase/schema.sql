@@ -64,6 +64,12 @@ create table public.order_items (
   line_total numeric(12,2) not null check (line_total >= 0)
 );
 
+create table public.edge_api_tokens (
+  id boolean primary key default true check (id),
+  token_hash text not null check (token_hash ~ '^[a-f0-9]{64}$'),
+  created_at timestamptz not null default now()
+);
+
 create index products_active_category_idx on public.products(category_id, name) where active;
 create index variants_active_product_idx on public.product_variants(product_id, size, color) where active;
 create index orders_created_at_idx on public.orders(created_at desc);
@@ -77,9 +83,12 @@ alter table public.product_images enable row level security;
 alter table public.product_variants enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
+alter table public.edge_api_tokens enable row level security;
 
 grant select on public.categories, public.products, public.product_images, public.product_variants to anon, authenticated;
 grant all on public.categories, public.products, public.product_images, public.product_variants, public.orders, public.order_items to service_role;
+revoke all on public.edge_api_tokens from public, anon, authenticated;
+grant select on public.edge_api_tokens to service_role;
 grant usage, select on all sequences in schema public to service_role;
 
 create policy "active categories are public" on public.categories
@@ -212,14 +221,14 @@ security invoker
     set search_path = pg_catalog, public, pg_temp
 as $$
 declare
-  product_id text := btrim(coalesce(p_product->>'id', ''));
+  target_product_id text := btrim(coalesce(p_product->>'id', ''));
   category_id text;
   product_name text := btrim(coalesce(p_product->>'name', ''));
   image_url text := btrim(coalesce(p_product->>'image', ''));
   variation jsonb;
   seen integer;
 begin
-  if product_id !~ '^[a-z0-9]+(?:-[a-z0-9]+)*$' or length(product_id) > 70
+  if target_product_id !~ '^[a-z0-9]+(?:-[a-z0-9]+)*$' or length(target_product_id) > 70
     or length(product_name) not between 1 and 100
     or length(btrim(coalesce(p_product->>'tagline', ''))) not between 1 and 160
     or length(btrim(coalesce(p_product->>'description', ''))) not between 1 and 1200
@@ -252,19 +261,19 @@ begin
   if seen > 0 then raise exception 'Não repita a mesma combinação de tamanho e cor.'; end if;
 
   insert into public.products(id, category_id, name, tagline, description, price, active)
-    values (product_id, category_id, product_name, btrim(p_product->>'tagline'),
+    values (target_product_id, category_id, product_name, btrim(p_product->>'tagline'),
       btrim(p_product->>'description'), (p_product->>'price')::numeric, coalesce((p_product->>'active')::boolean, true))
     on conflict (id) do update set category_id=excluded.category_id, name=excluded.name,
       tagline=excluded.tagline, description=excluded.description, price=excluded.price,
       active=excluded.active, updated_at=now();
-  delete from public.product_images where product_images.product_id = product_id;
+  delete from public.product_images where product_images.product_id = target_product_id;
   insert into public.product_images(product_id, url, alt, position)
-    values (product_id, image_url, product_name, 0);
-  update public.product_variants set active=false where product_variants.product_id=product_id;
+    values (target_product_id, image_url, product_name, 0);
+  update public.product_variants set active=false where product_variants.product_id=target_product_id;
   for variation in select value from jsonb_array_elements(p_product->'variants')
   loop
     insert into public.product_variants(product_id, size, color, stock, active)
-      values (product_id, btrim(variation->>'size'), btrim(variation->>'color'),
+      values (target_product_id, btrim(variation->>'size'), btrim(variation->>'color'),
         (variation->>'stock')::integer, coalesce((variation->>'active')::boolean, true))
       on conflict (product_id, size, color) do update set
         stock=excluded.stock, active=excluded.active;
@@ -298,12 +307,22 @@ begin
 end;
 $$;
 
+create function public.edge_verify_token(p_token_hash text) returns boolean
+language sql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $$
+  select exists (select 1 from public.edge_api_tokens where id and token_hash = p_token_hash)
+$$;
+
 revoke all on function public.checkout_create_order(text,text,jsonb) from public, authenticated;
 grant execute on function public.checkout_create_order(text,text,jsonb) to anon, service_role;
 revoke all on function public.admin_save_product(jsonb) from public, anon, authenticated;
 grant execute on function public.admin_save_product(jsonb) to service_role;
 revoke all on function public.admin_update_order_status(uuid,text) from public, anon, authenticated;
 grant execute on function public.admin_update_order_status(uuid,text) to service_role;
+revoke all on function public.edge_verify_token(text) from public, anon, authenticated;
+grant execute on function public.edge_verify_token(text) to service_role;
 
 insert into public.categories(id,name) values
   ('leggings','Leggings'),('tops','Tops'),('conjuntos','Conjuntos'),('shorts','Shorts'),('camisetas','Camisetas')
