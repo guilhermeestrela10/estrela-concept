@@ -1,47 +1,151 @@
 # Estrela Concept
 
-Loja online da Estrela Concept, com catálogo, busca, filtros, sacola, registro de pedidos e painel administrativo. Pagamento, entrega, trocas, devoluções e dúvidas são combinados pelo WhatsApp **+55 86 99926-9836** com **Livya De Araújo Macedo Estrela**. Os cinco produtos atuais são exemplos editáveis.
+**Seu estilo, seu brilho.** Uma loja virtual de moda fitness com catálogo, sacola, pedidos pelo WhatsApp e painel administrativo. O projeto está em fase de demonstração: os cinco produtos cadastrados são exemplos e devem ser trocados pelos dados reais antes da abertura ao público.
 
-## Executar localmente
+<p align="center">
+  <img src="static/brand-horizontal.png" alt="Estrela Concept" width="300">
+</p>
 
-1. Instale Python 3.10 ou superior.
-2. Na pasta do projeto, execute `python server.py`.
-3. Abra `http://127.0.0.1:8000` para a loja ou `http://127.0.0.1:8000/admin` para o painel.
+## Sobre a loja
 
-O servidor precisa ficar aberto enquanto você usa o site. As imagens e fontes de demonstração precisam de internet.
+A Estrela Concept apresenta peças de moda fitness em uma experiência responsiva, pensada para celular e computador. O atendimento é feito pelo WhatsApp da loja: **+55 86 99926-9836**. Livya De Araújo Macedo Estrela combina com o cliente pagamento, frete, entrega, trocas, devoluções e dúvidas sobre os produtos.
 
-## Dados e autenticação
+## Demonstração
 
-- Produtos, categorias, estoque, pedidos, conta administrativa e sessões do painel ficam no Supabase do projeto `khxfjydzpltqgtuuagrm`.
-- A conta administrativa usa Supabase Auth. O painel aceita o usuário `login-admin`; a senha não é salva neste repositório.
-- O Auth usa um endereço técnico sem caixa postal para manter o login por usuário; antes de publicar, cadastrar um e-mail real para recuperação de acesso.
-- Tokens de sessão são gerados aleatoriamente, enviados em cookie `HttpOnly` e salvos somente como hash na tabela privada pela RLS `admin_sessions`.
-- A tabela `admin_accounts`, sessões, pedidos e chaves internas não concedem leitura ao `anon` nem a `authenticated`. A Edge Function usa a chave secreta apenas no servidor.
-- Checkout, catálogo e administração passam pela Edge Function `estrela-api`; o RPC de checkout só pode ser chamado pela função com acesso de serviço.
-- Neste computador, o token privado que autoriza o servidor está em `%LOCALAPPDATA%\Estrela Concept\edge_api.key`. Em outra hospedagem, configure-o como variável de ambiente `ESTRELA_EDGE_API_TOKEN`; nunca publique esse valor.
-- Se o token não estiver configurado, as rotas de dados param com uma mensagem de erro; o servidor não grava pedidos ou produtos em um banco local por engano. A classe SQLite é usada apenas pelos testes.
+- **Loja:** [abrir Estrela Concept](https://promotions-nested-cent-cognitive.trycloudflare.com)
+- **Painel administrativo:** [abrir o painel](https://promotions-nested-cent-cognitive.trycloudflare.com/admin)
+- **Repositório:** [guilhermeestrela10/estrela-concept](https://github.com/guilhermeestrela10/estrela-concept)
 
-## Fluxo do pedido
+Os endereços acima usam um túnel temporário de demonstração. Ele depende desta máquina, do servidor e da conexão com a internet; o link pode mudar ou ficar indisponível. Para uma loja pública permanente será necessário contratar e configurar hospedagem e domínio.
 
-O site valida estoque e registra o pedido no Supabase. Depois, o cliente pode abrir o WhatsApp para combinar pagamento e entrega. Não há cobrança online. O contato também atende dúvidas sobre produtos, trocas e devoluções.
+## Recursos
+
+### Loja
+
+- Busca e filtros por categoria, tamanho e faixa de preço.
+- Página de detalhes com descrição, imagem e variações disponíveis.
+- Sacola com seleção de tamanho/cor e quantidade.
+- Validação de estoque e registro do pedido no Supabase.
+- Atalho para continuar o atendimento do pedido pelo WhatsApp.
+- Layout adaptável a telas pequenas, com navegação por teclado e suporte a preferência por movimento reduzido.
+
+### Painel administrativo
+
+- Login de administrador e sessão protegida.
+- Resumo de pedidos, vendas, produtos e estoque baixo.
+- Cadastro e edição de produtos, imagens por URL HTTPS, categorias, tamanhos, cores e estoque.
+- Controle de visibilidade dos produtos e atualização do status dos pedidos.
+
+### Identidade visual
+
+A interface usa o logotipo e o símbolo aprovados da Estrela Concept, com rosa antigo, preto e branco. Os arquivos oficiais usados pelo site estão em `static/brand-horizontal.png` e `static/brand-mark.png`.
+
+## Tecnologias e dados
+
+- **Interface:** HTML, CSS e JavaScript sem framework.
+- **Servidor web:** Python 3, usando a biblioteca padrão.
+- **Banco e autenticação:** Supabase Database e Supabase Auth.
+- **API de dados:** Edge Function `estrela-api`, que mantém a chave de serviço no ambiente Supabase.
+- **Testes automatizados:** `unittest` da biblioteca padrão do Python.
+
+O Supabase conectado contém categorias, produtos, imagens, variações/estoque, pedidos, itens do pedido, conta administrativa e sessões. A autorização para chamar a API do projeto usa um token privado; o Supabase guarda somente seu hash. A chave de serviço não é usada no navegador nem deve ser adicionada ao repositório.
+
+## Executar neste computador
+
+### Requisitos
+
+- Windows, macOS ou Linux.
+- Python 3.10 ou superior.
+- Acesso à internet para conectar ao Supabase e carregar fontes e imagens externas.
+- Token privado da API do projeto configurado localmente. No computador usado para a demonstração, ele já é lido de `%LOCALAPPDATA%\Estrela Concept\edge_api.key`.
+
+### Iniciar
+
+No terminal, abra a pasta do projeto e execute:
+
+```powershell
+python server.py
+```
+
+Depois, acesse:
+
+- Loja: <http://127.0.0.1:8000>
+- Painel: <http://127.0.0.1:8000/admin>
+- Verificação da conexão: <http://127.0.0.1:8000/api/status>
+
+O endpoint de status deve indicar `supabase`. Para encerrar o servidor, pressione `Ctrl+C` no terminal. As configurações `HOST` e `PORT` podem ser substituídas por variáveis de ambiente. O padrão é `127.0.0.1:8000`.
+
+### Token privado da API
+
+O servidor precisa de `ESTRELA_EDGE_API_TOKEN` para se comunicar com a Edge Function. No computador de demonstração, o valor é lido do arquivo privado indicado acima. Também é possível fornecê-lo no ambiente antes de iniciar o servidor:
+
+```powershell
+$env:ESTRELA_EDGE_API_TOKEN = "COLOQUE_O_TOKEN_PRIVADO_LOCALMENTE"
+python server.py
+```
+
+O texto acima é apenas um exemplo de configuração. Não coloque o token real neste README, no código, em capturas de tela ou em commits. Se o token não estiver configurado, as rotas de dados falham de forma segura em vez de gravarem pedidos em um banco local por engano.
+
+## Primeiro acesso ao painel
+
+Abra `/admin` e entre com a conta administrativa configurada para o projeto. A senha não fica armazenada neste repositório. Se o Supabase ainda não tiver uma conta administrativa, a configuração inicial só pode ser feita uma vez e exige uma solicitação local ou o token de configuração definido no servidor. Não tente recriar uma conta já configurada.
+
+O endereço de e-mail técnico usado pelo Auth não recebe mensagens. Antes da publicação, configure um e-mail válido para recuperação da conta e revise a senha administrativa.
+
+## Como funciona um pedido
+
+1. O cliente escolhe as peças, tamanhos, cores e quantidades.
+2. O site confere o estoque e registra o pedido no Supabase.
+3. O cliente pode abrir o WhatsApp com o resumo para combinar pagamento e entrega.
+
+O site não cobra pagamentos. O pedido registrado é uma solicitação para atendimento; pagamento, frete e entrega são combinados diretamente com a loja pelo WhatsApp.
 
 ## Testes
 
-Execute `python -m unittest discover -s tests -v` na pasta do projeto. Os testes usam SQLite temporário e cobrem pedidos, estoque, categorias e painel.
+Na pasta do projeto, execute:
 
-## Estrutura
+```powershell
+python -m unittest discover -s tests -v
+```
 
-- `server.py`: HTTP local, rotas da loja e sessão do painel.
-- `store.py`: integração com Supabase e SQLite usado pelos testes locais.
-- `catalog.py`: dados de exemplo para testes.
-- `supabase/schema.sql`: esquema, RLS e permissões.
-- `supabase/functions/estrela-api/`: API protegida para catálogo, pedidos e administração.
-- `index.html`, `static/app.js`, `static/styles.css`: loja.
-- `admin.html`, `static/admin.js`: painel.
-- `tests/`: testes automáticos.
+Os testes usam um banco SQLite temporário e cobrem pedidos, validação de estoque, categorias, autenticação do painel e regras de acesso. O SQLite é usado nos testes; a loja configurada usa o Supabase.
 
-## Etapa final antes da publicação
+## Estrutura do projeto
 
-Faltam cadastrar os produtos reais, contratar/configurar domínio e hospedagem, adicionar as informações e políticas definitivas, configurar backups na hospedagem e fazer testes de ponta a ponta no endereço final e em celulares reais.
+```text
+├── index.html                       # Vitrine da loja
+├── admin.html                       # Painel administrativo
+├── server.py                        # Servidor local e rotas HTTP
+├── store.py                         # Integração Supabase e armazenamento de teste
+├── catalog.py                       # Produtos fictícios para testes
+├── static/
+│   ├── app.js                        # Catálogo, sacola e pedido
+│   ├── admin.js                      # Ações do painel
+│   ├── styles.css                    # Layout e identidade visual
+│   ├── brand-horizontal.png          # Logotipo oficial
+│   └── brand-mark.png                # Símbolo e ícone da aba
+├── supabase/
+│   ├── schema.sql                    # Estrutura, RLS e permissões
+│   └── functions/estrela-api/        # API protegida
+└── tests/                            # Testes automatizados
+```
 
-**Lembrete solicitado:** quando esses itens estiverem concluídos, lembrar Livya de revisar segurança, backups, políticas e testes finais antes de divulgar a loja.
+## Situação e próximos passos
+
+### Disponível para demonstração
+
+- Loja, painel administrativo e fluxo de pedido integrados ao Supabase.
+- Cinco produtos de demonstração editáveis pelo painel.
+- Pagamento, entrega e atendimento direcionados ao WhatsApp.
+- Identidade visual oficial aplicada na loja e no painel.
+
+### Antes de abrir ao público
+
+- Substituir os produtos de demonstração por produtos reais, com fotos, descrições, preços, tamanhos, cores e estoque conferidos.
+- Contratar e configurar hospedagem permanente, domínio e HTTPS. O túnel atual é temporário e depende desta máquina ligada e conectada à internet.
+- Atualizar o acesso administrativo: usar uma senha nova e configurar um endereço de e-mail válido para recuperação.
+- Revisar e publicar os dados de identificação da loja e as políticas definitivas de privacidade, entrega, troca e devolução.
+- Configurar backups e revisar as proteções do banco no ambiente de produção.
+- Testar cadastro e edição de produtos, estoque, pedido, login e WhatsApp no domínio final, em computadores e celulares reais.
+
+**Lembrete solicitado:** quando os itens acima estiverem concluídos, fazer a revisão final de segurança, backups, políticas e funcionamento antes de divulgar a loja.
