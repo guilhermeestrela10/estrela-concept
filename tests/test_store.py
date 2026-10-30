@@ -64,6 +64,19 @@ class StoreTests(unittest.TestCase):
         variant = next(v for v in product["variants"] if v["size"] == "M" and v["color"] == "Preto")
         self.assertEqual(variant["stock"], 5)
 
+    def test_removed_variant_stays_available_for_cancelling_existing_order(self):
+        order = self.store.create_order({"name": "Ana Teste", "phone": "86999999999"}, [
+            {"productId": "legging-lua", "size": "M", "color": "Preto", "quantity": 2}
+        ])
+        product = next(p for p in self.store.products() if p["id"] == "legging-lua")
+        product["variants"] = [item for item in product["variants"] if not (item["size"] == "M" and item["color"] == "Preto")]
+        self.store.save_product(product)
+        self.store.update_order_status(order["id"], "cancelado")
+        archived = next(v for v in next(p for p in self.store.products(include_inactive=True)
+            if p["id"] == "legging-lua")["variants"] if v["size"] == "M" and v["color"] == "Preto")
+        self.assertFalse(archived["active"])
+        self.assertEqual(archived["stock"], 5)
+
     def test_rejects_duplicate_product_variants(self):
         product = {
             "id": "top-teste", "name": "Top Teste", "category": "Tops",

@@ -3,6 +3,7 @@
 import json
 import threading
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from http.server import ThreadingHTTPServer
@@ -15,6 +16,7 @@ from store import Store
 
 class IsolatedStoreHandler(StoreHandler):
     store = None
+    sessions = {}
 
 
 class CheckoutApiTests(unittest.TestCase):
@@ -35,6 +37,9 @@ class CheckoutApiTests(unittest.TestCase):
 
     def setUp(self):
         IsolatedStoreHandler.store = Store(Path(self.temp.name) / f"{self._testMethodName}.sqlite3")
+        IsolatedStoreHandler.sessions = {"api-test": {"expires": time.monotonic() + 3600}}
+        IsolatedStoreHandler.login_attempts.clear()
+        self.admin_cookie = "estrela_admin=api-test"
 
     def post_checkout(self, items, customer=None):
         body = json.dumps({"items": items, "customer": customer or {"name": "Ana Teste", "phone": "86999999999"}}).encode("utf-8")
@@ -92,14 +97,14 @@ class CheckoutApiTests(unittest.TestCase):
         ])
         self.assertEqual(status, 200)
         self.assertIn("id", result)
-        with urlopen(f"{self.base_url}/api/admin/orders", timeout=2) as response:
+        with urlopen(Request(f"{self.base_url}/api/admin/orders", headers={"Cookie":self.admin_cookie}), timeout=2) as response:
             orders = json.load(response)["orders"]
         self.assertEqual(orders[0]["id"], result["id"])
 
     def test_admin_can_create_category_and_product(self):
         def post(path, payload):
             request = Request(f"{self.base_url}{path}", data=json.dumps(payload).encode(),
-                headers={"Content-Type": "application/json"}, method="POST")
+                headers={"Content-Type": "application/json", "Cookie":self.admin_cookie}, method="POST")
             with urlopen(request, timeout=2) as response:
                 return response.status, json.load(response)
 
@@ -116,10 +121,76 @@ class CheckoutApiTests(unittest.TestCase):
         self.assertEqual(created["product"]["id"], "camiseta-teste")
 
     def test_admin_summary_reports_catalog_and_orders(self):
-        with urlopen(f"{self.base_url}/api/admin/summary", timeout=2) as response:
+        with urlopen(Request(f"{self.base_url}/api/admin/summary", headers={"Cookie":self.admin_cookie}), timeout=2) as response:
             summary = json.load(response)
         self.assertEqual(summary["products"], 5)
         self.assertEqual(summary["orders"], 0)
+
+    def admin_request(self, path, method="GET", payload=None, cookie=None, origin=None):
+        data = json.dumps(payload).encode() if payload is not None else None
+        request = Request(f"{self.base_url}{path}", data=data, method=method,
+            headers={"Content-Type":"application/json", "Origin":origin or self.base_url,
+                **({"Cookie":cookie} if cookie else {})})
+        try:
+            with urlopen(request, timeout=2) as response:
+                return response.status, json.load(response), response.headers.get("Set-Cookie")
+        except HTTPError as error:
+            return error.code, json.load(error), error.headers.get("Set-Cookie")
+
+    def test_admin_api_requires_login_and_setup_creates_a_session(self):
+        status, _, _ = self.admin_request("/api/admin/products")
+        self.assertEqual(status, 401)
+        status, result, cookie = self.admin_request("/api/admin/setup", "POST", {
+            "username":"login-admin", "password":"MinhaSenhaForte2026!"
+        })
+        self.assertEqual(status, 201)
+        self.assertTrue(cookie.startswith("estrela_admin="))
+        session_status, session, _ = self.admin_request("/api/admin/session", cookie=cookie.split(";",1)[0])
+        self.assertEqual(session_status, 200)
+        self.assertTrue(session["authenticated"])
+
+    def test_wrong_admin_password_is_rejected(self):
+        self.admin_request("/api/admin/setup", "POST", {
+            "username":"login-admin", "password":"MinhaSenhaForte2026!"
+        })
+        status, result, _ = self.admin_request("/api/admin/login", "POST", {
+            "username":"login-admin", "password":"senha-incorreta-2026"
+        })
+        self.assertEqual(status, 401)
+        self.assertIn("incorret", result["error"])
+
+    def test_admin_setup_can_only_happen_once(self):
+        self.admin_request("/api/admin/setup", "POST", {
+            "username":"login-admin", "password":"MinhaSenhaForte2026!"
+        })
+        status, _, _ = self.admin_request("/api/admin/setup", "POST", {
+            "username":"outro-admin", "password":"OutraSenhaForte2026!"
+        })
+        self.assertEqual(status, 409)
+
+    def test_admin_can_log_in_and_logout(self):
+        self.admin_request("/api/admin/setup", "POST", {
+            "username":"login-admin", "password":"MinhaSenhaForte2026!"
+        })
+        status, _, cookie = self.admin_request("/api/admin/logout", "POST", {},
+            cookie=None)
+        self.assertEqual(status, 200)
+        status, _, cookie = self.admin_request("/api/admin/login", "POST", {
+            "username":"login-admin", "password":"MinhaSenhaForte2026!"
+        })
+        self.assertEqual(status, 200)
+        status, _, _ = self.admin_request("/api/admin/products", cookie=cookie.split(";",1)[0])
+        self.assertEqual(status, 200)
+        status, _, _ = self.admin_request("/api/admin/logout", "POST", {}, cookie=cookie.split(";",1)[0])
+        self.assertEqual(status, 200)
+        status, _, _ = self.admin_request("/api/admin/products", cookie=cookie.split(";",1)[0])
+        self.assertEqual(status, 401)
+
+    def test_admin_setup_rejects_cross_origin_request(self):
+        status, _, _ = self.admin_request("/api/admin/setup", "POST", {
+            "username":"login-admin", "password":"MinhaSenhaForte2026!"
+        }, origin="https://attacker.example")
+        self.assertEqual(status, 403)
 
 
 if __name__ == "__main__":

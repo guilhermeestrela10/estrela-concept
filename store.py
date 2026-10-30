@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import re
+import hashlib
+import hmac
+import secrets
 import sqlite3
 import unicodedata
 import uuid
@@ -58,6 +61,12 @@ class Store:
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL UNIQUE,
                     active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1))
+                );
+                CREATE TABLE IF NOT EXISTS admin_account (
+                    id INTEGER PRIMARY KEY CHECK(id=1),
+                    username TEXT NOT NULL UNIQUE,
+                    salt BLOB NOT NULL,
+                    password_hash BLOB NOT NULL
                 );
                 CREATE TABLE IF NOT EXISTS products (
                     id TEXT PRIMARY KEY,
@@ -151,9 +160,16 @@ class Store:
             category_id=excluded.category_id,tagline=excluded.tagline,description=excluded.description,
             price_cents=excluded.price_cents,image=excluded.image,active=excluded.active""",
             (product_id, fields["name"].strip(), category["id"], fields["tagline"].strip(), fields["description"].strip(), price, fields["image"].strip(), active))
-        db.execute("DELETE FROM variants WHERE product_id=?", (product_id,))
+        submitted = {(v["size"], v["color"]): v for v in variants}
+        current = db.execute("SELECT id,size,color FROM variants WHERE product_id=?", (product_id,)).fetchall()
+        for variant in current:
+            item = submitted.pop((variant["size"], variant["color"]), None)
+            if item:
+                db.execute("UPDATE variants SET stock=?,active=? WHERE id=?", (item["stock"], item["active"], variant["id"]))
+            else:
+                db.execute("UPDATE variants SET active=0 WHERE id=?", (variant["id"],))
         db.executemany("INSERT INTO variants(product_id,size,color,stock,active) VALUES(?,?,?,?,?)",
-            [(product_id, v["size"], v["color"], v["stock"], v["active"]) for v in variants])
+            [(product_id, v["size"], v["color"], v["stock"], v["active"]) for v in submitted.values()])
         return product_id
 
     def save_product(self, product):
@@ -211,6 +227,8 @@ class Store:
             raise ValueError("Informe seu nome (até 100 caracteres).")
         if not phone.isdigit() or not 10 <= len(phone) <= 13:
             raise ValueError("Informe um WhatsApp válido com DDD.")
+        if len(phone) in (10, 11):
+            phone = "55" + phone
         if not isinstance(items, list) or not items or len(items) > 50:
             raise ValueError("Adicione entre 1 e 50 itens ao carrinho.")
         order_id = uuid.uuid4().hex[:10].upper()
@@ -296,3 +314,29 @@ class Store:
                 "orders": sum(row["count"] for row in orders),
                 "sales": sum(row["total"] for row in orders if row["status"] == "concluido") / 100,
                 "byStatus": {row["status"]: {"count": row["count"], "total": row["total"] / 100} for row in orders}}
+
+    def admin_configured(self):
+        with self._connect() as db:
+            return db.execute("SELECT 1 FROM admin_account WHERE id=1").fetchone() is not None
+
+    def setup_admin(self, username, password):
+        if not isinstance(username, str) or not re.fullmatch(r"[A-Za-z0-9_-]{4,40}", username):
+            raise ValueError("O usuário deve ter de 4 a 40 caracteres: letras, números, hífen ou sublinhado.")
+        if not isinstance(password, str) or len(password) < 12 or len(password) > 256:
+            raise ValueError("Crie uma senha com pelo menos 12 caracteres.")
+        salt = secrets.token_bytes(16)
+        password_hash = hashlib.scrypt(password.encode("utf-8"), salt=salt, n=2**14, r=8, p=1)
+        try:
+            with self._connect() as db:
+                db.execute("INSERT INTO admin_account(id,username,salt,password_hash) VALUES(1,?,?,?)",
+                    (username, salt, password_hash))
+        except sqlite3.IntegrityError as error:
+            raise ValueError("O acesso administrativo já foi configurado.") from error
+
+    def verify_admin(self, username, password):
+        with self._connect() as db:
+            account = db.execute("SELECT username,salt,password_hash FROM admin_account WHERE id=1").fetchone()
+        if not account or not isinstance(username, str) or not isinstance(password, str) or len(password) > 256:
+            return False
+        candidate = hashlib.scrypt(password.encode("utf-8"), salt=account["salt"], n=2**14, r=8, p=1)
+        return hmac.compare_digest(account["username"], username) and hmac.compare_digest(account["password_hash"], candidate)

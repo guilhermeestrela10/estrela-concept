@@ -102,6 +102,8 @@ function addItem(product, size, color, quantity = 1) {
   if (!variant || requested > variant.stock) return false;
   if (existing) existing.quantity = requested;
   else state.cart.push({ productId: product.id, size, color, quantity });
+  document.querySelector("#cart-items").hidden = false;
+  document.querySelector("#order-success").hidden = true;
   updateCartStorage();
   return true;
 }
@@ -124,7 +126,6 @@ function renderCart() {
   document.querySelector("#cart-summary").hidden = empty;
   const subtotal = state.cart.reduce((sum, item) => sum + (canCheckoutItem(item) ? getCartProduct(item).price * item.quantity : 0), 0);
   document.querySelector("#cart-subtotal").textContent = money(subtotal);
-  document.querySelector("#whatsapp-order-link").hidden = true;
   const unavailable = state.cart.some(item => !canCheckoutItem(item));
   document.querySelector("#cart-notice").textContent = cartLoadWarning
     ? "A sacola salva estava inválida; começamos uma nova sacola vazia."
@@ -201,17 +202,23 @@ document.querySelector("#cart-items").addEventListener("click", event => {
 document.querySelector("#checkout").addEventListener("click", async () => {
   const button = document.querySelector("#checkout");
   const message = document.querySelector("#checkout-message");
+  const customer = { name: document.querySelector("#customer-name").value.trim(), phone: document.querySelector("#customer-phone").value.trim() };
+  if (!customer.name || !customer.phone) { message.textContent = "Preencha seu nome e WhatsApp com DDD."; return; }
   button.disabled = true; message.textContent = "Conferindo disponibilidade…";
   try {
-    const response = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: state.cart }) });
+    const response = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ customer, items: state.cart }) });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Não foi possível preparar o pedido.");
     const summary = result.items.map(item => `• ${item.name} — ${item.size}, ${item.color} — ${item.quantity}x ${money(item.lineTotal)}`).join("\n");
-    const text = `Olá! Quero conversar sobre este pedido da Estrela Concept:\n\n${summary}\n\nSubtotal: ${money(result.total)}\n\nPedido de demonstração, sem pagamento pelo site.`;
-    message.textContent = "Pedido pronto. Você pode continuar pelo WhatsApp ou fechar esta janela.";
+    const text = `Olá! Registrei o pedido de demonstração ${result.id} no site da Estrela Concept.\n\n${summary}\n\nSubtotal: ${money(result.total)}\nNome: ${customer.name}\n\nGostaria de combinar pagamento e entrega.`;
+    document.querySelector("#order-success-message").textContent = `Pedido ${result.id} registrado. Pagamento e entrega serão combinados pelo WhatsApp.`;
+    document.querySelector("#cart-items").hidden = true;
+    document.querySelector("#cart-empty").hidden = true;
+    document.querySelector("#cart-summary").hidden = true;
+    document.querySelector("#order-success").hidden = false;
+    state.cart = []; updateCartStorage();
     const link = document.querySelector("#whatsapp-order-link");
     link.href = whatsappUrl(text);
-    link.hidden = false;
   } catch (error) { message.textContent = error.message; }
   finally { button.disabled = false; }
 });
