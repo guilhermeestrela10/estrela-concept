@@ -210,7 +210,7 @@ document.querySelector("#checkout").addEventListener("click", async () => {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Não foi possível preparar o pedido.");
     const summary = result.items.map(item => `• ${item.name} — ${item.size}, ${item.color} — ${item.quantity}x ${money(item.lineTotal)}`).join("\n");
-    const text = `Olá! Registrei o pedido de demonstração ${result.id} no site da Estrela Concept.\n\n${summary}\n\nSubtotal: ${money(result.total)}\nNome: ${customer.name}\n\nGostaria de combinar pagamento e entrega.`;
+    const text = `Olá! Registrei o pedido ${result.id} no site da Estrela Concept.\n\n${summary}\n\nSubtotal: ${money(result.total)}\nNome: ${customer.name}\n\nGostaria de combinar pagamento e entrega.`;
     document.querySelector("#order-success-message").textContent = `Pedido ${result.id} registrado. Pagamento e entrega serão combinados pelo WhatsApp.`;
     document.querySelector("#cart-items").hidden = true;
     document.querySelector("#cart-empty").hidden = true;

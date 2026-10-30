@@ -7,6 +7,11 @@ import hashlib
 import hmac
 import secrets
 import sqlite3
+import json
+import os
+import urllib.error
+import urllib.parse
+import urllib.request
 import unicodedata
 import uuid
 from contextlib import contextmanager
@@ -17,6 +22,86 @@ from pathlib import Path
 from catalog import PRODUCTS
 
 STATUSES = {"novo", "em_andamento", "concluido", "cancelado"}
+
+
+class SupabaseStore:
+    """PostgREST adapter; the secret key is read only by this server process."""
+    def __init__(self, url, key, auth_path):
+        self.url, self.key = url.rstrip("/"), key
+        self.auth = Store(auth_path)
+
+    def admin_configured(self): return self.auth.admin_configured()
+    def setup_admin(self, username, password): return self.auth.setup_admin(username, password)
+    def verify_admin(self, username, password): return self.auth.verify_admin(username, password)
+
+    @classmethod
+    def configured(cls, auth_path):
+        key = os.environ.get("ESTRELA_SUPABASE_SECRET_KEY", "")
+        key_file = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "Estrela Concept" / "supabase.secret"
+        if not key and key_file.is_file():
+            key = key_file.read_text(encoding="utf-8").strip()
+        url = os.environ.get("ESTRELA_SUPABASE_URL", "https://khxfjydzpltqgtuuagrm.supabase.co")
+        return cls(url, key, auth_path) if key.startswith("sb_secret_") and url.startswith("https://") else None
+
+    def _request(self, path, method="GET", payload=None, prefer=None):
+        data = None if payload is None else json.dumps(payload, ensure_ascii=False).encode()
+        request = urllib.request.Request(self.url + "/rest/v1/" + path, data=data, method=method,
+            headers={"apikey": self.key,
+                "Content-Type": "application/json", **({"Prefer": prefer} if prefer else {})})
+        try:
+            with urllib.request.urlopen(request, timeout=15) as response:
+                body = response.read()
+                return json.loads(body) if body else None
+        except urllib.error.HTTPError as error:
+            detail = error.read().decode("utf-8", "replace")
+            try: detail = json.loads(detail).get("message", detail)
+            except (ValueError, AttributeError): pass
+            raise ValueError("Supabase: " + str(detail)[:300]) from None
+        except (urllib.error.URLError, TimeoutError) as error:
+            raise ValueError("Não foi possível conectar ao Supabase.") from error
+
+    def _rows(self, table, query): return self._request(table + "?" + urllib.parse.urlencode(query, safe="(),.*")) or []
+    def categories(self): return self._rows("categories", {"select":"id,name,active", "order":"name"})
+
+    def products(self, include_inactive=False):
+        query = {"select":"id,name,tagline,description,price,active,category:categories(name),images:product_images(url,alt,position),variants:product_variants(size,color,stock,active)", "order":"name"}
+        if not include_inactive: query["active"] = "eq.true"
+        result = []
+        for row in self._rows("products", query):
+            image = sorted(row["images"], key=lambda item:item["position"])[0] if row["images"] else {}
+            result.append({"id":row["id"],"name":row["name"],"category":row["category"]["name"],"tagline":row["tagline"],"description":row["description"],"price":float(row["price"]),"image":image.get("url", ""),"active":row["active"],"variants":row["variants"]})
+        return result
+
+    def save_product(self, product):
+        Store._validate_product(product)
+        self._request("rpc/admin_save_product", "POST", {"p_product":product})
+        return next(item for item in self.products(True) if item["id"] == product["id"])
+    def set_product_active(self, product_id, active):
+        rows=self._request("products?id=eq."+urllib.parse.quote(product_id)+"&select=id", "PATCH", {"active":bool(active)}, "return=representation")
+        if not rows: raise ValueError("Produto não encontrado.")
+    def save_category(self, name):
+        if not isinstance(name,str) or not name.strip() or len(name.strip())>60: raise ValueError("O nome da categoria deve ter entre 1 e 60 caracteres.")
+        name=name.strip(); category_id=_slug(name)
+        if not category_id: raise ValueError("Informe um nome de categoria válido.")
+        rows=self._request("categories?select=id,name,active", "POST", {"id":category_id,"name":name,"active":True}, "return=representation")
+        return rows[0]
+    def create_order(self, customer, items):
+        if not isinstance(customer,dict): raise ValueError("Informe os dados do cliente.")
+        name,phone=customer.get("name"),re.sub(r"\D","",str(customer.get("phone","")))
+        if not isinstance(name,str) or not name.strip() or len(name.strip())>100: raise ValueError("Informe seu nome (até 100 caracteres).")
+        if not 10<=len(phone)<=13: raise ValueError("Informe um WhatsApp válido com DDD.")
+        return self._request("rpc/checkout_create_order","POST",{"p_customer_name":name.strip(),"p_customer_phone":phone,"p_items":items})
+    def orders(self):
+        rows=self._rows("orders",{"select":"id,customer_name,customer_phone,status,total,created_at,items:order_items(product_name,size,color,quantity,unit_price,line_total)","order":"created_at.desc"})
+        return [{"id":r["id"],"customerName":r["customer_name"],"customerPhone":r["customer_phone"],"status":r["status"],"total":float(r["total"]),"createdAt":r["created_at"],"items":[{"name":i["product_name"],"size":i["size"],"color":i["color"],"quantity":i["quantity"],"unitPrice":float(i["unit_price"]),"lineTotal":float(i["line_total"])} for i in r["items"]]} for r in rows]
+    def update_order_status(self, order_id, status):
+        if status not in STATUSES: raise ValueError("Status de pedido inválido.")
+        self._request("rpc/admin_update_order_status","POST",{"p_order_id":order_id,"p_status":status})
+    def summary(self):
+        products=self.products(); orders=self.orders(); by_status={s:{"count":0,"total":0} for s in STATUSES}
+        for order in orders:
+            by_status[order["status"]]["count"]+=1; by_status[order["status"]]["total"]+=order["total"]
+        return {"products":len(products),"lowStockVariants":sum(1 for p in products for v in p["variants"] if v["active"] and v["stock"]<=3),"orders":len(orders),"sales":sum(x["total"] for x in orders if x["status"]=="concluido"),"byStatus":by_status}
 
 
 def _slug(value: str) -> str:

@@ -12,9 +12,9 @@ from collections import defaultdict, deque
 from http.cookies import SimpleCookie
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
-from store import Store
+from store import Store, SupabaseStore
 
 ROOT = Path(__file__).resolve().parent
 HOST = os.environ.get("HOST", "127.0.0.1")
@@ -33,7 +33,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
 
     def get_store(self):
         if self.__class__.store is None:
-            self.__class__.store = Store(DB_PATH)
+            self.__class__.store = SupabaseStore.configured(DB_PATH) or Store(DB_PATH)
         return self.__class__.store
 
     def end_headers(self) -> None:
@@ -86,7 +86,16 @@ class StoreHandler(SimpleHTTPRequestHandler):
         return f"estrela_admin={token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=28800" + ("; Secure" if secure else "")
 
     def do_GET(self) -> None:
+        try:
+            self._do_GET()
+        except (ValueError, OSError) as error:
+            self.send_json({"error": str(error)}, 503)
+
+    def _do_GET(self) -> None:
         path = urlparse(self.path).path
+        if path == "/api/status":
+            self.send_json({"backend": "supabase" if isinstance(self.get_store(), SupabaseStore) else "local"})
+            return
         if path == "/api/admin/session":
             self.send_json({"configured": self.get_store().admin_configured(), "authenticated": bool(self.admin_session()),
                 "setupTokenRequired": bool(ADMIN_SETUP_TOKEN) and not self.local_setup_allowed(),
@@ -122,6 +131,13 @@ class StoreHandler(SimpleHTTPRequestHandler):
             return
         if path == "/":
             self.path = "/index.html"
+        static_path = unquote(urlparse(self.path).path)
+        if "\\" in static_path or ".." in Path(static_path).parts or not (
+            static_path in {"/index.html", "/admin.html", "/favicon.ico"}
+            or static_path.startswith("/static/")
+        ):
+            self.send_error(404)
+            return
         super().do_GET()
 
     def read_json(self):
@@ -179,7 +195,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
                 return
             if path == "/api/checkout":
                 order = self.get_store().create_order(payload.get("customer"), payload.get("items"))
-                self.send_json({"ok": True, **order, "message": "Pedido de demonstração registrado."})
+                self.send_json({"ok": True, **order, "message": "Pedido registrado."})
             elif path == "/api/admin/products":
                 product = self.get_store().save_product(payload)
                 self.send_json({"product": product}, 201)

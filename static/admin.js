@@ -35,6 +35,12 @@ function showAdmin() {
 }
 function showError(error) { notice.textContent = error.message; notice.classList.add("error"); }
 function showMessage(message) { notice.textContent = message; notice.classList.remove("error"); }
+fetch("/api/status").then(response => response.json()).then(status => {
+  document.querySelector("#backend-label").textContent = status.backend === "supabase" ? "ESTRELA CONCEPT · SUPABASE ONLINE" : "ESTRELA CONCEPT · BANCO LOCAL";
+  document.querySelector("#backend-footnote").textContent = status.backend === "supabase"
+    ? "Dados no Supabase. Os produtos do catálogo são exemplos editáveis."
+    : "Banco local ativo. Para usar o Supabase, execute python configure_supabase.py e reinicie o servidor. Os produtos do catálogo são exemplos editáveis.";
+}).catch(() => {});
 async function refresh() {
   notice.textContent = "Carregando dados…";
   try {
@@ -64,8 +70,10 @@ function renderOrders() {
   document.querySelector("#orders-list").innerHTML = orders.map(order => {
     const items = order.items.map(item => `${item.quantity}× ${escapeText(item.name)} · ${escapeText(item.size)} · ${escapeText(item.color)}`).join("<br>");
     const date = new Date(order.createdAt).toLocaleString("pt-BR", { dateStyle:"short", timeStyle:"short" });
+    const phone = String(order.customerPhone).replace(/\D/g, "");
+    const waPhone = phone.startsWith("55") ? phone : `55${phone}`;
     const choices = Object.entries(statusNames).map(([key,name]) => `<option value="${key}" ${order.status === key ? "selected":""}>${name}</option>`).join("");
-    return `<article class="order-card"><div class="order-main"><div class="order-title"><strong>Pedido #${escapeText(order.id)}</strong><span class="status-pill status-${escapeText(order.status)}">${statusNames[order.status] || escapeText(order.status)}</span></div><p>${escapeText(order.customerName)} · <a href="https://wa.me/55${escapeText(order.customerPhone)}" target="_blank" rel="noreferrer">${escapeText(order.customerPhone)} ↗</a></p><p>${items}</p><small>${date}</small></div><div class="order-side"><strong>${currency(order.total)}</strong><label>Status<select data-order-status="${escapeText(order.id)}" ${["cancelado","concluido"].includes(order.status) ? "disabled":""}>${choices}</select></label></div></article>`;
+    return `<article class="order-card"><div class="order-main"><div class="order-title"><strong>Pedido #${escapeText(order.id)}</strong><span class="status-pill status-${escapeText(order.status)}">${statusNames[order.status] || escapeText(order.status)}</span></div><p>${escapeText(order.customerName)} · <a href="https://wa.me/${escapeText(waPhone)}" target="_blank" rel="noreferrer">${escapeText(order.customerPhone)} ↗</a></p><p>${items}</p><small>${date}</small></div><div class="order-side"><strong>${currency(order.total)}</strong><label>Status<select data-order-status="${escapeText(order.id)}" ${["cancelado","concluido"].includes(order.status) ? "disabled":""}>${choices}</select></label></div></article>`;
   }).join("") || `<div class="admin-empty">Nenhum pedido ${filter ? "com este status":"recebido"} ainda.</div>`;
 }
 function renderCategories() {

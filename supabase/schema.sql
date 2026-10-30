@@ -69,6 +69,7 @@ create index variants_active_product_idx on public.product_variants(product_id, 
 create index orders_created_at_idx on public.orders(created_at desc);
 create index orders_status_created_idx on public.orders(status, created_at desc);
 create index order_items_order_idx on public.order_items(order_id);
+create index order_items_variant_idx on public.order_items(variant_id);
 
 alter table public.categories enable row level security;
 alter table public.products enable row level security;
@@ -124,7 +125,7 @@ begin
   if customer_phone !~ '^[0-9]{12,13}$' then
     raise exception 'Informe um WhatsApp válido com DDD.';
   end if;
-  if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) not between 1 and 50 then
+  if jsonb_typeof(p_items) is distinct from 'array' or jsonb_array_length(p_items) not between 1 and 50 then
     raise exception 'Adicione entre 1 e 50 itens ao carrinho.';
   end if;
   if exists (
@@ -183,19 +184,19 @@ begin
     values (order_id, customer_name, customer_phone, total, total);
   insert into public.order_items(order_id, product_id, variant_id, product_name, size, color,
     quantity, unit_price, line_total)
-  select order_id, requested.product_id, chosen_items.variant_id, chosen_items.name,
-    requested.size, requested.color, requested.quantity, chosen_items.price,
-    round(chosen_items.price * requested.quantity, 2)
+  select order_id, requested_items.product_id, chosen_items.variant_id, chosen_items.name,
+    requested_items.size, requested_items.color, requested_items.quantity, chosen_items.price,
+    round(chosen_items.price * requested_items.quantity, 2)
   from (
     select item->>'productId' as product_id, item->>'size' as size, item->>'color' as color,
       sum((item->>'quantity')::integer)::integer as quantity
     from jsonb_array_elements(p_items) item
     group by item->>'productId', item->>'size', item->>'color'
-  ) requested
+  ) requested_items
   join lateral (
     select p.name, coalesce(v.price_override, p.price) as price, v.id as variant_id
     from public.products p join public.product_variants v on v.product_id=p.id
-    where p.id=requested.product_id and v.size=requested.size and v.color=requested.color
+    where p.id=requested_items.product_id and v.size=requested_items.size and v.color=requested_items.color
   ) chosen_items on true;
 
   return jsonb_build_object(
@@ -225,7 +226,7 @@ begin
     or image_url !~ '^https://'
     or coalesce((p_product->>'price')::numeric, 0) <= 0
     or coalesce((p_product->>'price')::numeric, 0) > 1000000
-    or jsonb_typeof(p_product->'variants') <> 'array'
+    or jsonb_typeof(p_product->'variants') is distinct from 'array'
     or jsonb_array_length(p_product->'variants') not between 1 and 200 then
     raise exception 'Dados do produto inválidos.';
   end if;
@@ -298,7 +299,7 @@ end;
 $$;
 
 revoke all on function public.checkout_create_order(text,text,jsonb) from public, authenticated;
-grant execute on function public.checkout_create_order(text,text,jsonb) to anon, authenticated, service_role;
+grant execute on function public.checkout_create_order(text,text,jsonb) to anon, service_role;
 revoke all on function public.admin_save_product(jsonb) from public, anon, authenticated;
 grant execute on function public.admin_save_product(jsonb) to service_role;
 revoke all on function public.admin_update_order_status(uuid,text) from public, anon, authenticated;
