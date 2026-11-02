@@ -337,6 +337,8 @@ create table public.admin_sessions (
     created_at timestamptz not null default now()
 );
 
+create index admin_sessions_user_id_idx on public.admin_sessions(user_id);
+
 alter table public.admin_accounts enable row level security;
 alter table public.admin_sessions enable row level security;
 revoke all on public.admin_accounts, public.admin_sessions from public, anon, authenticated;

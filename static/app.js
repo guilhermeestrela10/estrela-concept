@@ -246,6 +246,8 @@ async function start() {
     state.products = (await response.json()).products;
     const categories = [...new Set(state.products.map(product => product.category))];
     document.querySelector("#category").innerHTML += categories.map(category => `<option value="${escapeHTML(category)}">${escapeHTML(category)}</option>`).join("");
+    const sizes = [...new Set(state.products.flatMap(product => availableVariants(product).map(variant => variant.size)))].sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true }));
+    document.querySelector("#size").innerHTML += sizes.map(size => `<option value="${escapeHTML(size)}">${escapeHTML(size)}</option>`).join("");
     renderProducts(); renderCart();
     const productId = new URLSearchParams(location.search).get("produto");
     if (productId) openProduct(productId);

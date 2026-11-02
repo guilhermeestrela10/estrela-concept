@@ -12,8 +12,8 @@ A Estrela Concept apresenta peças de moda fitness em uma experiência responsiv
 
 ## Demonstração
 
-- **Loja:** [abrir Estrela Concept](https://promotions-nested-cent-cognitive.trycloudflare.com)
-- **Painel administrativo:** [abrir o painel](https://promotions-nested-cent-cognitive.trycloudflare.com/admin)
+- **Loja:** [abrir Estrela Concept](https://laws-commissioner-hobbies-interested.trycloudflare.com)
+- **Painel administrativo:** [abrir o painel](https://laws-commissioner-hobbies-interested.trycloudflare.com/admin)
 - **Repositório:** [guilhermeestrela10/estrela-concept](https://github.com/guilhermeestrela10/estrela-concept)
 
 Os endereços acima usam um túnel temporário de demonstração. Ele depende desta máquina, do servidor e da conexão com a internet; o link pode mudar ou ficar indisponível. Para uma loja pública permanente será necessário contratar e configurar hospedagem e domínio.
