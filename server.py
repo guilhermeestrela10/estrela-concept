@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import smtplib
 import os
+import logging
 from html import escape
 import secrets
 import sys
@@ -115,6 +116,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
     recovery_attempts = defaultdict(deque)
 
     def __init__(self, *args, **kwargs):
+        self.response_started = False
         super().__init__(*args, directory=str(ROOT), **kwargs)
         self.current_admin_token = None
 
@@ -133,6 +135,21 @@ class StoreHandler(SimpleHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         super().end_headers()
+
+    def send_response(self, code, message=None):
+        self.response_started = True
+        super().send_response(code, message)
+
+    def fail_request(self, status, message, unexpected=False):
+        if unexpected:
+            logging.exception("Unhandled error for %s %s", self.command, urlparse(self.path).path)
+        if self.response_started:
+            self.close_connection = True
+            return
+        try:
+            self.send_json({"error": message}, status)
+        except OSError:
+            self.close_connection = True
 
     def send_json(self, data: dict, status: int = 200, headers: dict | None = None) -> None:
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
@@ -202,8 +219,10 @@ class StoreHandler(SimpleHTTPRequestHandler):
     def do_GET(self) -> None:
         try:
             self._do_GET()
-        except (ValueError, OSError) as error:
-            self.send_json({"error": str(error)}, 503)
+        except ValueError as error:
+            self.fail_request(503, str(error))
+        except Exception:
+            self.fail_request(500, "Erro interno. Tente novamente.", unexpected=True)
 
     def _do_GET(self) -> None:
         path = urlparse(self.path).path
@@ -408,9 +427,11 @@ class StoreHandler(SimpleHTTPRequestHandler):
             else:
                 self.send_json({"error": "Endpoint não encontrado."}, 404)
         except OverflowError as error:
-            self.send_json({"error": str(error)}, 413)
+            self.fail_request(413, str(error))
         except (ValueError, TypeError, json.JSONDecodeError) as error:
-            self.send_json({"error": str(error)}, 400)
+            self.fail_request(400, str(error))
+        except Exception:
+            self.fail_request(500, "Erro interno. Tente novamente.", unexpected=True)
 
     def do_PUT(self) -> None:
         if not self.require_admin():
@@ -424,7 +445,9 @@ class StoreHandler(SimpleHTTPRequestHandler):
             payload["id"] = parts[3]
             self.send_json({"product": self.admin_call("save_product", payload)})
         except (ValueError, TypeError, json.JSONDecodeError) as error:
-            self.send_json({"error": str(error)}, 400)
+            self.fail_request(400, str(error))
+        except Exception:
+            self.fail_request(500, "Erro interno. Tente novamente.", unexpected=True)
 
     def do_PATCH(self) -> None:
         if not self.require_admin():
@@ -441,7 +464,9 @@ class StoreHandler(SimpleHTTPRequestHandler):
             else:
                 self.send_json({"error": "Endpoint não encontrado."}, 404)
         except (ValueError, TypeError, json.JSONDecodeError) as error:
-            self.send_json({"error": str(error)}, 400)
+            self.fail_request(400, str(error))
+        except Exception:
+            self.fail_request(500, "Erro interno. Tente novamente.", unexpected=True)
 
 
 if __name__ == "__main__":

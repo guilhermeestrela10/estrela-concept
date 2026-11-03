@@ -63,18 +63,24 @@ fetch("/api/status").then(response => response.json()).then(status => {
 async function refresh() {
   notice.textContent = "Carregando dados…";
   try {
-    const [summary, products, orders, categories] = await Promise.all([
-      api("/api/admin/summary"), api("/api/admin/products"), api("/api/admin/orders"), api("/api/admin/categories")
+    const [products, orders, categories] = await Promise.all([
+      api("/api/admin/products"), api("/api/admin/orders"), api("/api/admin/categories")
     ]);
     state.products = products.products; state.orders = orders.orders; state.categories = categories.categories;
-    renderMetrics(summary); renderProducts(); renderOrders(); renderCategories();
+    renderMetrics(); renderProducts(); renderOrders(); renderCategories();
     notice.textContent = "Painel atualizado."; notice.classList.remove("error");
   } catch(error) { showError(error); }
 }
-function renderMetrics(summary) {
-  const count = summary.byStatus || {};
+function renderMetrics() {
+  const completedSalesCents = state.orders.reduce((sum, order) => sum + (order.status === "concluido" ? Math.round(order.total * 100) : 0), 0);
+  const metrics = {
+    products: state.products.filter(product => product.active).length,
+    orders: state.orders.length,
+    sales: completedSalesCents / 100,
+    lowStockVariants: state.products.reduce((sum, product) => sum + product.variants.filter(variant => variant.active && variant.stock <= 3).length, 0)
+  };
   document.querySelector("#metrics").innerHTML = [
-    ["Produtos ativos", summary.products], ["Pedidos", summary.orders], ["Vendas concluídas", currency(summary.sales)], ["Variações com estoque baixo", summary.lowStockVariants]
+    ["Produtos ativos", metrics.products], ["Pedidos", metrics.orders], ["Vendas concluídas", currency(metrics.sales)], ["Variações com estoque baixo", metrics.lowStockVariants]
   ].map(([label,value]) => `<article class="metric-card"><span>${escapeText(label)}</span><strong>${escapeText(value)}</strong></article>`).join("");
 }
 function renderProducts() {

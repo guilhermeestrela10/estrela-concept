@@ -1,163 +1,185 @@
 # Estrela Concept
 
-**Seu estilo, seu brilho.** A Estrela Concept é uma loja virtual de moda fitness. O site apresenta produtos, permite montar uma sacola e registra pedidos para a equipe continuar o atendimento pelo WhatsApp.
+<p align="center">
+  <img src="static/brand-horizontal.png" alt="Estrela Concept" width="420">
+</p>
 
-> **Demonstração:** os produtos e estoques atuais são exemplos. O site está publicado, mas ainda não está pronto para receber vendas reais.
+<p align="center"><strong>Seu estilo, seu brilho.</strong><br>Loja virtual de moda fitness com atendimento próximo pelo WhatsApp.</p>
 
-## Acessos
+<p align="center">
+  <a href="https://estrela-concept.onrender.com/">Abrir a loja</a> ·
+  <a href="https://estrela-concept.onrender.com/admin">Painel administrativo</a> ·
+  <a href="https://github.com/guilhermeestrela10/estrela-concept">Repositório no GitHub</a>
+</p>
 
-- **Loja:** [estrela-concept.onrender.com](https://estrela-concept.onrender.com/)
-- **Painel administrativo:** [abrir o painel](https://estrela-concept.onrender.com/admin)
-- **Código no GitHub:** [guilhermeestrela10/estrela-concept](https://github.com/guilhermeestrela10/estrela-concept)
+> **Estado do projeto:** demonstração funcional. O catálogo contém produtos de exemplo. Antes de vender ao público, a loja precisa receber o catálogo verdadeiro, políticas finais e uma hospedagem/domínio escolhidos pela proprietária.
 
-O painel não tem link na loja pública. Para acessá-lo, abra diretamente o endereço `/admin`; a página exige login.
+## Sobre o projeto
 
-## O que o site faz
+A **Estrela Concept** é uma loja online para apresentar roupas fitness e facilitar pedidos pelo celular ou computador. A vitrine permite explorar as peças e montar uma sacola; o sistema registra o pedido e a equipe combina pagamento, entrega, trocas, devoluções e dúvidas diretamente com a cliente pelo WhatsApp.
 
-### Para quem visita a loja
+O projeto atende dois públicos:
 
-- Pesquisa produtos e filtra por categoria, tamanho e preço.
-- Consulta fotos, descrição, tamanhos, cores e disponibilidade.
-- Adiciona itens à sacola e informa nome e WhatsApp para enviar um pedido.
-- O site confere o estoque e registra o pedido no banco de dados.
-- O cliente pode abrir o WhatsApp para combinar pagamento, frete, entrega, trocas, devoluções ou tirar dúvidas.
+- **Clientes:** navegam pelo catálogo, conferem fotos, tamanhos, cores e disponibilidade e enviam um pedido com nome e WhatsApp.
+- **Administradora:** entra em uma página restrita para atualizar produtos, imagens, categorias e estoque, acompanhar pedidos e abrir uma conversa com a cliente.
 
-O site **não cobra pagamentos** e não calcula frete. Essas combinações são feitas diretamente com a loja pelo WhatsApp **+55 86 99926-9836**.
+O site não processa pagamentos, não calcula frete e não confirma uma venda paga. O pedido é o início do atendimento, e as condições são acertadas pelo WhatsApp **+55 86 99926-9836**.
 
-### Para a administração
+## O que já está implementado
 
-- Consulta pedidos e acompanha seus status.
-- Cadastra e edita produtos, categorias, preços e estoque.
-- Adiciona até 10 fotos por produto. As imagens podem vir de endereços HTTPS ou do dispositivo, em JPEG, PNG ou WebP, com até 4 MB por arquivo.
-- Controla se cada produto aparece na loja.
-- Usa o link **Esqueci minha senha** para receber um link de recuperação no e-mail cadastrado no Supabase.
-- Pode receber avisos de novos pedidos no Gmail da loja. O e-mail mostra itens, valor e um link para abrir o painel; o telefone do cliente continua somente no painel, depois do login.
+### Loja
 
-## Situação atual
+- Layout responsivo alinhado à identidade visual aprovada.
+- Busca e filtros por categoria, tamanho e faixa de preço.
+- Página de detalhes com galeria de fotos e opções de variação.
+- Sacola persistida no navegador.
+- Validação de disponibilidade no servidor e baixa de estoque transacional ao criar pedido.
+- Atalho para continuar o atendimento pelo WhatsApp.
 
-O projeto está publicado para demonstração no Render e usa o Supabase para os dados, as imagens e a autenticação. Na revisão de **3 de novembro de 2026**, o banco tinha sete produtos de exemplo, cinco visíveis. Essa quantidade pode mudar quando o catálogo for editado.
+### Painel administrativo
 
-O plano gratuito do Render pode suspender o serviço depois de um período sem visitas; a primeira abertura após a pausa pode demorar. O site não depende de este computador ficar ligado. O projeto Supabase também está no plano gratuito e pode pausar projetos sem atividade prolongada.
+- Acesso pela rota direta `/admin`; o link não é exibido na navegação pública.
+- Login, sessão administrativa, saída e fluxo de recuperação de senha pelo Supabase Auth.
+- Cadastro e edição de produtos, categorias, preços, variações e estoque.
+- Envio de até 10 imagens por produto em JPEG, PNG ou WebP (até 4 MB por arquivo), além de imagens por URL HTTPS.
+- Acompanhamento e atualização de status de pedidos, com atalho para chamar a cliente pelo WhatsApp.
+- Indicadores calculados a partir dos dados já carregados no painel para evitar uma consulta repetida ao banco.
 
-## Como os dados são protegidos
+### Avisos por e-mail
 
-- O navegador conversa com o servidor Python. A chave de serviço do Supabase fica na Edge Function e não é usada no navegador.
-- O servidor chama a função estrela-api com um token privado. O banco armazena o hash desse token.
-- As tabelas têm RLS habilitado, e o acesso de escrita passa pelas rotas protegidas do servidor.
-- A sacola fica no navegador; pedidos, produtos, estoque e dados administrativos ficam no Supabase.
-- O painel usa sessão protegida por cookie, com validade de até oito horas. Trocar a senha pela recuperação encerra as sessões administrativas existentes.
-- O upload de imagens exige acesso administrativo e valida o tipo e o conteúdo do arquivo.
+Quando o pedido é gravado, o servidor tenta enviar uma notificação ao Gmail da loja por SMTP seguro. A mensagem mostra os itens, o total e um botão para abrir o painel. Os dados de contato da cliente ficam somente no painel, que exige login. Uma falha no e-mail não cancela o pedido; no momento, avisos com falha não são reenviados automaticamente.
 
-**Limite conhecido:** a proteção do Supabase contra senhas vazadas está desativada no plano atual. A proprietária decidiu manter as credenciais administrativas atuais durante a demonstração. Reavalie essas decisões antes da abertura ao público.
+## Como funciona
+
+```mermaid
+flowchart LR
+  Cliente[Cliente no navegador] --> Loja[Loja HTML, CSS e JavaScript]
+  Loja --> Servidor[Servidor Python]
+  Servidor --> API[Edge Function protegida]
+  API --> Auth[Supabase Auth]
+  API --> Banco[(Supabase Database)]
+  API --> Fotos[Supabase Storage]
+  Servidor --> Gmail[Gmail da loja · aviso de pedido]
+  Admin[Administradora em /admin] --> Servidor
+```
+
+O navegador conversa com o servidor Python. O servidor usa uma Edge Function para acessar dados e operações administrativas do Supabase. A chave de serviço do Supabase permanece no ambiente Supabase; o token privado usado pelo servidor é configurado como segredo na hospedagem. As fotos do catálogo ficam no Supabase Storage.
 
 ## Tecnologias
 
-- **Loja e painel:** HTML, CSS e JavaScript, sem framework.
-- **Servidor:** Python 3.10 ou superior e biblioteca padrão do Python.
-- **Banco, login e arquivos:** Supabase Database, Supabase Auth e Supabase Storage.
-- **Hospedagem da demonstração:** Render.
-- **Testes:** unittest, com SQLite temporário para simular o armazenamento local.
+| Parte | Tecnologia |
+| --- | --- |
+| Vitrine e painel | HTML, CSS e JavaScript nativos |
+| Servidor web e API | Python 3.10+ e biblioteca padrão |
+| Dados e autenticação | Supabase Database e Supabase Auth |
+| Fotos | Supabase Storage |
+| Operações protegidas | Supabase Edge Functions e PostgreSQL |
+| Hospedagem atual | Render |
+| Testes automatizados | `unittest` e SQLite temporário |
 
 Não há dependências Python externas para instalar.
 
-## Executar no computador
+## Executar localmente
 
-### 1. Preparar o token privado
+### Requisitos
 
-O servidor local precisa de ESTRELA_EDGE_API_TOKEN para acessar a Edge Function. No computador usado para a demonstração, o token pode ser lido de:
+- Python 3.10 ou superior.
+- Token privado `ESTRELA_EDGE_API_TOKEN` configurado para conectar ao Supabase.
 
-    %LOCALAPPDATA%\Estrela Concept\edge_api.key
+O servidor pode ler o token do arquivo `%LOCALAPPDATA%\Estrela Concept\edge_api.key`. Como alternativa, configure-o apenas na sessão atual do PowerShell:
 
-Se ainda não tiver esse arquivo, configure a variável de ambiente no PowerShell. Use o valor do token guardado em local seguro; não o coloque no código, no README, em capturas de tela ou no GitHub.
+```powershell
+$env:ESTRELA_EDGE_API_TOKEN = "SEU_TOKEN_PRIVADO"
+python server.py
+```
 
-    $env:ESTRELA_EDGE_API_TOKEN = "SEU_TOKEN_PRIVADO"
-
-### 2. Iniciar o servidor
-
-Abra o PowerShell na pasta do projeto e execute:
-
-    python server.py
-
-Abra estes endereços no navegador:
+Abra no navegador:
 
 - Loja: <http://127.0.0.1:8000>
 - Painel: <http://127.0.0.1:8000/admin>
 - Estado da conexão: <http://127.0.0.1:8000/api/status>
 
-Para encerrar, volte ao terminal e pressione Ctrl+C. O servidor usa 127.0.0.1:8000 por padrão; HOST e PORT podem ser definidos por variáveis de ambiente.
+O servidor usa `127.0.0.1:8000` por padrão. `HOST` e `PORT` podem ser configurados por variáveis de ambiente. Encerre com `Ctrl+C` no terminal.
 
-O servidor local conectado ao Supabase não troca automaticamente para SQLite se a conexão falhar: as rotas de dados retornam erro para evitar gravar dados no lugar errado. SQLite é usado nos testes.
+Se o Supabase não estiver acessível ou o token não estiver configurado, as rotas de dados exibem um erro. O sistema não troca silenciosamente para outro banco. SQLite é utilizado pelos testes.
 
-## Recuperação da senha do painel
+## Configuração do serviço publicado
 
-O painel solicita a recuperação pelo nome de usuário e não informa se um usuário existe. O link é enviado pelo Supabase Auth ao e-mail cadastrado. A nova senha precisa ter pelo menos 12 caracteres; depois de alterá-la, entre novamente no painel.
+O serviço Render utiliza as seguintes variáveis de ambiente. Cadastre os valores privados diretamente no painel do Render; não os grave neste repositório.
 
-Para que o link de recuperação abra corretamente, nas configurações **Authentication → URL Configuration** do Supabase, inclua este endereço na lista de redirecionamentos permitidos:
+| Variável | Uso |
+| --- | --- |
+| `ESTRELA_EDGE_API_TOKEN` | Segredo para o servidor chamar a Edge Function |
+| `GMAIL_SMTP_USER` | Conta Gmail que envia os avisos |
+| `GMAIL_APP_PASSWORD` | Senha de app do Gmail, armazenada como segredo |
+| `ORDER_NOTIFICATION_EMAIL` | Endereço que recebe os avisos de novos pedidos |
+| `ADMIN_PANEL_URL` | Link do painel incluído no e-mail; padrão atual: `https://estrela-concept.onrender.com/admin` |
+| `HOST` / `PORT` | Endereço e porta do servidor; o Render define a porta |
 
-    https://estrela-concept.onrender.com/admin
+Para enviar e-mails, é necessária uma senha de app do Google, não a senha normal da conta. A conta precisa ter a verificação em duas etapas habilitada. Consulte a [ajuda oficial do Google sobre senhas de app](https://support.google.com/mail/answer/185833). Ative também as notificações do Gmail no celular da loja.
 
-Quando um domínio próprio for configurado, atualize também o destino usado pela função e a lista permitida no Supabase. A recuperação por e-mail não foi testada de ponta a ponta, pois isso enviaria uma mensagem real.
+## Banco e arquivos do Supabase
 
-## Avisos de novos pedidos por Gmail
+O projeto já utiliza o Supabase associado à loja. O arquivo `supabase/schema.sql` descreve tabelas, regras e operações do banco; não o execute novamente no projeto publicado sem verificar as migrações existentes. A função `supabase/functions/estrela-api/` implementa operações protegidas, como login administrativo, pedidos, atualização do catálogo e upload de imagens.
 
-O servidor envia avisos de pedidos reais usando o Gmail da loja por SMTP com SSL e senha de app. A mensagem é enviada em segundo plano depois que o pedido é salvo; uma falha no e-mail não cancela o pedido. Cada aviso inclui itens, total e botão para abrir o painel e falar com o cliente pelo WhatsApp; o telefone não é enviado no e-mail. Se o envio falhar, o Render registra um aviso nos logs. Não há repetição automática de e-mails que falharem.
+O catálogo existente contém dados de demonstração. O arquivo `catalog.py` oferece dados usados no armazenamento temporário dos testes, não é o cadastro oficial dos produtos publicados.
 
-Para ativar no Render, abra as variáveis de ambiente do serviço e configure:
+## Segurança e privacidade
 
-- `GMAIL_SMTP_USER`: `estrelaconcept0@gmail.com`.
-- `GMAIL_APP_PASSWORD`: senha de app do Google, guardada como variável secreta. Não use a senha normal da conta e não coloque esse valor no GitHub.
-- `ORDER_NOTIFICATION_EMAIL`: `estrelaconcept0@gmail.com`.
-- `ADMIN_PANEL_URL`: `https://estrela-concept.onrender.com/admin` (opcional; esse é o padrão atual).
+- Segredos de servidor não são enviados ao navegador nem devem ser commitados.
+- Operações administrativas e dados de pedidos exigem sessão autenticada.
+- O painel utiliza cookies de sessão com validade limitada e proteção contra requisições de outras origens.
+- A criação de pedido valida os dados e atualiza o estoque em uma transação no banco.
+- O upload de imagens verifica formato, conteúdo e tamanho.
+- O e-mail de aviso não inclui telefone nem outros dados pessoais da cliente.
+- O servidor envia resposta genérica para falhas internas e registra detalhes técnicos somente nos logs.
 
-O Google exige a verificação em duas etapas para criar uma senha de app. Gere-a na conta da loja, em **Conta Google → Segurança → Senhas de app**, e cadastre o valor diretamente como segredo no Render. Não envie essa senha por mensagem. O Google pode não exibir a opção em algumas contas. Consulte [a ajuda oficial sobre senhas de app](https://support.google.com/mail/answer/185833).
-
-Depois de salvar as variáveis, reinicie ou publique o serviço no Render. A loja também mostra `estrelaconcept0@gmail.com` na área de contato. A notificação do celular depende de as notificações do Gmail estarem habilitadas no aparelho. Quando o domínio próprio for comprado, o link do painel pode ser atualizado pela variável `ADMIN_PANEL_URL`.
-
-## Banco de dados e imagens
-
-O arquivo supabase/schema.sql documenta as tabelas, validações, permissões e funções usadas pelo projeto. A aplicação publicada usa o projeto Supabase já conectado; não é necessário executar esse arquivo novamente para testar o site.
-
-O catálogo de demonstração fica no Supabase. As imagens enviadas pelo painel são salvas no bucket product-images; a vitrine lê as imagens desse bucket. O arquivo catalog.py fornece produtos de exemplo para o armazenamento SQLite usado nos testes.
-
-## Hospedagem e atualizações
-
-O serviço do Render está ligado ao repositório do GitHub e à branch main. As mudanças são versionadas e enviadas ao GitHub. O Render está configurado para publicar automaticamente; se uma alteração enviada não iniciar um deploy, acesse o serviço no Render e use **Manual Deploy** para publicar o último commit.
-
-O arquivo render.yaml descreve o serviço, o comando de inicialização e a variável secreta ESTRELA_EDGE_API_TOKEN. O token deve ser configurado nas variáveis privadas do Render e nunca incluído neste repositório.
+**Limite conhecido:** a proteção do Supabase contra senhas vazadas não está habilitada no plano atual. As credenciais administrativas também foram compartilhadas durante a configuração da demonstração. Reavalie a troca da senha e das chaves compartilhadas, e ative proteções disponíveis, antes de abrir a loja ao público.
 
 ## Testes
 
 Na pasta do projeto, execute:
 
-    python -m unittest discover -s tests -v
+```powershell
+python -m unittest discover -s tests -v
+```
 
-Os testes cobrem cadastro e sessão do painel, recuperação de senha no servidor, validação de pedidos e estoque, imagens e ciclo de pedidos no armazenamento SQLite temporário. Eles não enviam e-mails nem substituem a conferência do fluxo real no Supabase.
+Os testes cobrem login e sessão, recuperação de senha no servidor, respostas de erro, validação de pedidos, estoque, upload e operações de catálogo no SQLite temporário. Eles não fazem compras reais, não enviam e-mails e não substituem a validação da implantação com o Supabase.
 
-## Arquivos principais
+## Mapa dos arquivos
 
-| Arquivo | Para que serve |
+| Caminho | Finalidade |
 | --- | --- |
-| index.html | Página da loja |
-| admin.html | Tela do painel administrativo |
-| server.py | Servidor web e rotas da aplicação |
-| store.py | Acesso ao Supabase e armazenamento SQLite dos testes |
-| catalog.py | Produtos de exemplo para os testes locais |
-| static/app.js | Catálogo, sacola e envio de pedidos |
-| static/admin.js | Login, cadastro e gerenciamento no painel |
-| static/styles.css | Estilos responsivos da loja e do painel |
-| supabase/schema.sql | Estrutura e regras do banco |
-| supabase/functions/estrela-api/ | Função de API protegida do Supabase |
-| tests/ | Testes automatizados |
+| `index.html` | Página principal da loja |
+| `admin.html` | Interface administrativa restrita |
+| `server.py` | Servidor web, segurança HTTP, rotas e avisos por e-mail |
+| `store.py` | Comunicação com o Supabase e armazenamento SQLite para testes |
+| `catalog.py` | Produtos de exemplo usados nos testes locais |
+| `static/app.js` | Catálogo, filtros, sacola e checkout |
+| `static/admin.js` | Login, catálogo, imagens e pedidos no painel |
+| `static/styles.css` | Aparência responsiva |
+| `static/brand-horizontal.png` | Logo horizontal da marca usada neste README |
+| `supabase/schema.sql` | Definição do esquema e das operações SQL |
+| `supabase/functions/estrela-api/index.ts` | API protegida no Supabase |
+| `render.yaml` | Configuração do serviço Render |
+| `tests/` | Testes automatizados |
 
-## O que falta antes de abrir ao público
+## Publicação e domínio
 
-Estas etapas foram deixadas para o final, conforme combinado:
+O código está conectado ao repositório GitHub e à hospedagem atual no Render. A URL `onrender.com` é adequada para demonstração e pode ser substituída por um domínio próprio depois. O plano gratuito do Render pode suspender o serviço após inatividade; a primeira visita após a pausa pode demorar. Projetos gratuitos do Supabase também podem ser pausados por inatividade.
 
-1. **Cadastrar o catálogo real:** fotos, descrições, preços, tamanhos, cores e estoque conferidos.
-2. **Escolher domínio e hospedagem:** registrar um domínio próprio e escolher um plano que mantenha o site disponível sem a pausa do plano gratuito.
-3. **Definir e publicar as informações da loja:** dados de identificação e políticas definitivas de privacidade, entrega, troca e devolução.
-4. **Definir backups:** no plano gratuito do Supabase, não há backups automáticos disponíveis para download. Escolha uma rotina de exportação segura ou um plano que ofereça o tipo de backup necessário. Consulte a [documentação de backups do Supabase](https://supabase.com/docs/guides/platform/backups).
-5. **Revisar o domínio final:** liberar o endereço de recuperação no Supabase e testar login, recuperação, cadastro e edição de produtos, estoque, pedidos e WhatsApp em celular e computador.
-6. **Revisão de segurança e publicação:** conferir credenciais, chaves, permissões, backups e conteúdo antes de divulgar a loja.
+### Migração futura para a Hostinger
 
-**Lembrete solicitado:** quando essas etapas estiverem concluídas, fazer a revisão final de segurança, backups, políticas e funcionamento antes de abrir ao público.
+A migração será planejada quando a proprietária escolher e contratar um plano Hostinger. Antes de mover o site, vamos confirmar que o plano aceita o servidor Python e o modo de execução necessários. A migração deverá configurar variáveis secretas, HTTPS, domínio e redirecionamentos de recuperação no Supabase, testar o painel, pedidos, estoque, imagens e notificações de e-mail, mantendo o Supabase como banco enquanto for adequado. Não é necessário comprar domínio agora; ele pode ser conectado depois.
+
+## O que falta antes de vender ao público
+
+1. Cadastrar produtos verdadeiros: fotos, descrições, preços, tamanhos, cores e estoque.
+2. Escolher e contratar domínio e hospedagem permanentes.
+3. Publicar informações legais e políticas definitivas de privacidade, entrega, troca e devolução.
+4. Definir uma rotina de backup do Supabase; os recursos disponíveis variam conforme o plano. Consulte a [documentação oficial de backups](https://supabase.com/docs/guides/platform/backups).
+5. Revisar segredos e acesso administrativo e configurar proteções adequadas ao plano escolhido.
+6. Conferir a lista de URLs permitidas para recuperação de senha no Supabase e validar o envio de e-mails.
+7. Fazer uma revisão final no domínio definitivo em computador e celular, sem criar pedidos reais desnecessários.
+
+**Combinado:** quando domínio, hospedagem, catálogo e políticas estiverem definidos, fazer uma revisão final de segurança, backups e funcionamento antes da divulgação pública.

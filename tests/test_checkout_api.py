@@ -93,6 +93,15 @@ class CheckoutApiTests(unittest.TestCase):
         self.assertIn("frame-ancestors 'none'", headers["Content-Security-Policy"])
         self.assertEqual(headers["Permissions-Policy"], "camera=(), microphone=(), geolocation=()")
 
+    def test_unexpected_api_errors_return_a_generic_response(self):
+        with patch.object(IsolatedStoreHandler.store, "products", side_effect=RuntimeError("private backend detail")):
+            with self.assertRaises(HTTPError) as error:
+                urlopen(f"{self.base_url}/api/products", timeout=2)
+        self.assertEqual(error.exception.code, 500)
+        body = json.load(error.exception)
+        self.assertIn("Erro interno", body["error"])
+        self.assertNotIn("private backend detail", body["error"])
+
     def test_image_upload_requires_admin_session(self):
         status, _ = self.post_image_upload(b"\xff\xd8\xff\xd9", cookie=False)
         self.assertEqual(status, 401)
