@@ -6,12 +6,13 @@ import threading
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 from http.server import ThreadingHTTPServer
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from server import StoreHandler
+from server import StoreHandler, build_order_notification
 from store import Store, SupabaseStore
 
 
@@ -149,6 +150,21 @@ class CheckoutApiTests(unittest.TestCase):
         with urlopen(Request(f"{self.base_url}/api/admin/orders", headers={"Cookie":self.admin_cookie}), timeout=2) as response:
             orders = json.load(response)["orders"]
         self.assertEqual(orders[0]["id"], result["id"])
+
+    def test_order_notification_links_to_panel_without_customer_phone(self):
+        with patch.dict(os.environ, {
+            "GMAIL_SMTP_USER": "estrelaconcept0@gmail.com",
+            "ORDER_NOTIFICATION_EMAIL": "estrelaconcept0@gmail.com",
+        }, clear=False):
+            message = build_order_notification({
+                "id": "ORDER123", "total": 90, "customerPhone": "5586999999999",
+                "items": [{"name": "Legging Lua", "size": "M", "color": "Preto", "quantity": 1}],
+            })
+        body = message.get_content()
+        self.assertIn("https://estrela-concept.onrender.com/admin", body)
+        self.assertIn("ORDER123", body)
+        self.assertIn("Legging Lua", body)
+        self.assertNotIn("5586999999999", body)
 
     def test_admin_can_create_category_and_product(self):
         def post(path, payload):

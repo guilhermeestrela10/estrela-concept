@@ -31,6 +31,7 @@ O site **não cobra pagamentos** e não calcula frete. Essas combinações são 
 - Adiciona até 10 fotos por produto. As imagens podem vir de endereços HTTPS ou do dispositivo, em JPEG, PNG ou WebP, com até 4 MB por arquivo.
 - Controla se cada produto aparece na loja.
 - Usa o link **Esqueci minha senha** para receber um link de recuperação no e-mail cadastrado no Supabase.
+- Pode receber avisos de novos pedidos no Gmail da loja. O e-mail mostra itens, valor e um link para abrir o painel; o telefone do cliente continua somente no painel, depois do login.
 
 ## Situação atual
 
@@ -96,6 +97,21 @@ Para que o link de recuperação abra corretamente, nas configurações **Authen
     https://estrela-concept.onrender.com/admin
 
 Quando um domínio próprio for configurado, atualize também o destino usado pela função e a lista permitida no Supabase. A recuperação por e-mail não foi testada de ponta a ponta, pois isso enviaria uma mensagem real.
+
+## Avisos de novos pedidos por Gmail
+
+O servidor envia os avisos usando o Gmail da loja por SMTP com SSL e senha de app. A mensagem é enviada em segundo plano depois que o pedido é salvo; uma falha no e-mail não cancela o pedido. Se o envio falhar, o Render registra um aviso nos logs. Não há repetição automática de e-mails que falharem.
+
+Para ativar no Render, abra as variáveis de ambiente do serviço e configure:
+
+- `GMAIL_SMTP_USER`: `estrelaconcept0@gmail.com`.
+- `GMAIL_APP_PASSWORD`: senha de app do Google, guardada como variável secreta. Não use a senha normal da conta e não coloque esse valor no GitHub.
+- `ORDER_NOTIFICATION_EMAIL`: `estrelaconcept0@gmail.com`.
+- `ADMIN_PANEL_URL`: `https://estrela-concept.onrender.com/admin` (opcional; esse é o padrão atual).
+
+O Google exige a verificação em duas etapas para criar uma senha de app. Gere-a na conta da loja, em **Conta Google → Segurança → Senhas de app**, e cadastre o valor diretamente como segredo no Render. Não envie essa senha por mensagem. O Google pode não exibir a opção em algumas contas. Consulte [a ajuda oficial sobre senhas de app](https://support.google.com/mail/answer/185833).
+
+Depois de salvar as variáveis, reinicie ou publique o serviço no Render. Faça um pedido de teste e confirme o recebimento no Gmail; a notificação do celular depende de as notificações do Gmail estarem habilitadas no aparelho. Quando o domínio próprio for comprado, o link do painel pode ser atualizado pela variável `ADMIN_PANEL_URL`.
 
 ## Banco de dados e imagens
 

@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import smtplib
 import os
 import secrets
 import sys
 import time
 import hmac
+import threading
 from collections import defaultdict, deque
+from email.message import EmailMessage
 from http.cookies import SimpleCookie
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -22,6 +25,48 @@ PORT = int(os.environ.get("PORT", "8000"))
 ADMIN_SETUP_TOKEN = os.environ.get("ESTRELA_ADMIN_SETUP_TOKEN", "")
 MAX_IMAGE_SIZE = 4 * 1024 * 1024
 IMAGE_TYPES = {"image/jpeg": b"\xff\xd8\xff", "image/png": b"\x89PNG\r\n\x1a\n", "image/webp": b"RIFF"}
+ADMIN_PANEL_URL = os.environ.get("ADMIN_PANEL_URL", "https://estrela-concept.onrender.com/admin")
+
+
+def build_order_notification(order):
+    sender = os.environ["GMAIL_SMTP_USER"]
+    message = EmailMessage()
+    message["From"] = f"Estrela Concept <{sender}>"
+    message["To"] = os.environ["ORDER_NOTIFICATION_EMAIL"]
+    message["Subject"] = f"Novo pedido recebido · #{order['id']}"
+    items = "\n".join(
+        f"• {item['quantity']}× {item['name']} · {item['size']} · {item['color']}"
+        for item in order["items"]
+    )
+    total = f"R$ {float(order['total']):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    message.set_content(
+        f"A Estrela Concept recebeu um novo pedido.\n\n"
+        f"Pedido: #{order['id']}\nItens:\n{items}\nTotal: {total}\n\n"
+        "Para ver o telefone do cliente e conversar pelo WhatsApp, acesse o painel administrativo:\n"
+        f"{ADMIN_PANEL_URL}\n\nO painel exige login."
+    )
+    return message
+
+
+def send_order_notification(order):
+    try:
+        message = build_order_notification(order)
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as smtp:
+            smtp.login(os.environ["GMAIL_SMTP_USER"], os.environ["GMAIL_APP_PASSWORD"].replace(" ", ""))
+            smtp.send_message(message)
+    except Exception as error:
+        print(f"Falha ao enviar aviso por e-mail do pedido #{order.get('id')}: {type(error).__name__}", file=sys.stderr)
+
+
+def queue_order_notification(order):
+    if not all(os.environ.get(key) for key in ("GMAIL_SMTP_USER", "GMAIL_APP_PASSWORD", "ORDER_NOTIFICATION_EMAIL")):
+        return False
+    try:
+        threading.Thread(target=send_order_notification, args=(order,), daemon=True, name="order-email").start()
+        return True
+    except RuntimeError as error:
+        print(f"Falha ao iniciar aviso por e-mail do pedido #{order.get('id')}: {type(error).__name__}", file=sys.stderr)
+        return False
 
 
 def validate_image(content_type, image):
@@ -327,6 +372,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
                 return
             if path == "/api/checkout":
                 order = self.get_store().create_order(payload.get("customer"), payload.get("items"))
+                queue_order_notification(order)
                 self.send_json({"ok": True, **order, "message": "Pedido registrado."})
             elif path == "/api/admin/products":
                 product = self.admin_call("save_product", payload)
@@ -383,6 +429,7 @@ if __name__ == "__main__":
         raise
 
     print(f"Estrela Concept disponível em http://{HOST}:{PORT}")
+    print("Avisos de pedidos por e-mail: " + ("ativos" if all(os.environ.get(key) for key in ("GMAIL_SMTP_USER", "GMAIL_APP_PASSWORD", "ORDER_NOTIFICATION_EMAIL")) else "configure GMAIL_SMTP_USER, GMAIL_APP_PASSWORD e ORDER_NOTIFICATION_EMAIL"))
     try:
         server.serve_forever()
     except KeyboardInterrupt:
