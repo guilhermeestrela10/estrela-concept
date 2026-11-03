@@ -196,10 +196,11 @@ footer small { font-size: 9px; }
   .hero-note { margin-top: 20px; }
   .hero-note > span { font-size: 21px; }
   .hero-note p { font-size: 12px; }
-  .hero-art { height: clamp(250px,72vw,310px); margin: 16px 0 18px 5%; }
-  .hero-image { inset: 0 9% 0 8%; }
-  .hero-stamp { top: 15px; right: 3%; }
-  .hero-caption { bottom: 8px; left: 0; padding: 11px 13px; font-size: 10px; }
+  .hero-art { height: clamp(250px,68vw,300px); margin: 20px 0 22px 2%; }
+  .hero-image { inset: 0 9% 38px 5%; width: 86%; height: calc(100% - 38px); object-position: center 40%; }
+  .hero-stamp { top: -12px; right: 2%; width: 68px; height: 68px; border-width: 4px; font-size: 5px; }
+  .hero-stamp b { font-size: 19px; }
+  .hero-caption { position: relative; bottom: auto; left: auto; display: inline-block; margin: 8px 0 0; padding: 9px 12px; font-size: 9px; }
   .hero-bottom { right: 7%; left: 7%; bottom: 12px; gap: 12px; font-size: 7px; }
   .hero-bottom span:last-child { text-align: right; }
   .intro { padding: 48px 7%; }
