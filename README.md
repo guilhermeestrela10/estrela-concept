@@ -153,7 +153,7 @@ Para ativar, abra **GitHub → Settings → Secrets and variables → Actions �
 
 Depois, acesse **Actions → Backup criptografado do Supabase → Run workflow** para fazer a primeira execução. O agendamento semanal começa após os dois segredos serem cadastrados. Para restaurar, baixe o artefato e use `gpg --decrypt estrela-supabase-backup.tar.gz.gpg > estrela-supabase-backup.tar.gz`; extraia o arquivo e use os SQL em um projeto de recuperação depois de conferir o destino. Faça um teste de restauração antes de depender desse processo em produção.
 
-**Limite deste backup:** o Supabase CLI exclui os esquemas gerenciados `auth` e `storage`; imagens guardadas no Supabase Storage não entram nesta cópia. Mantenha os arquivos originais das fotos fora do Supabase até existir uma rotina específica de backup do Storage. Consulte a [documentação oficial do Supabase](https://supabase.com/docs/guides/platform/backups).
+**Limite deste backup:** o Supabase CLI exclui os esquemas gerenciados `auth` e `storage`; isso também deixa de fora a conta administrativa do Supabase Auth e as imagens guardadas no Supabase Storage. Mantenha os arquivos originais das fotos fora do Supabase até existir uma rotina específica de backup do Storage. Depois de restaurar o banco, será necessário recriar ou recuperar a conta administrativa. Consulte a [documentação oficial do Supabase](https://supabase.com/docs/guides/platform/backups).
 
 ## Testes
 

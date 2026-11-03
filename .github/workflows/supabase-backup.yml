@@ -41,17 +41,19 @@ jobs:
             exit 1
           fi
           work="$(mktemp -d)"
-          trap 'rm -rf "$work"' EXIT
+          archive="$RUNNER_TEMP/estrela-supabase-backup.tar.gz"
+          trap 'rm -rf "$work" "$archive"' EXIT
           supabase db dump --db-url "$SUPABASE_DB_URL" --role-only -f "$work/roles.sql"
           supabase db dump --db-url "$SUPABASE_DB_URL" -f "$work/schema.sql"
           supabase db dump --db-url "$SUPABASE_DB_URL" --data-only --use-copy -f "$work/data.sql"
-          tar -czf "$RUNNER_TEMP/estrela-supabase-backup.tar.gz" -C "$work" roles.sql schema.sql data.sql
+          tar -czf "$archive" -C "$work" roles.sql schema.sql data.sql
           printf '%s' "$BACKUP_ENCRYPTION_PASSPHRASE" > "$work/passphrase"
           chmod 600 "$work/passphrase"
           gpg --batch --yes --pinentry-mode loopback --passphrase-file "$work/passphrase" \
             --symmetric --cipher-algo AES256 --s2k-mode 3 --s2k-digest-algo SHA512 \
             --s2k-count 65011712 --output "$RUNNER_TEMP/estrela-supabase-backup.tar.gz.gpg" \
-            "$RUNNER_TEMP/estrela-supabase-backup.tar.gz"
+            "$archive"
+          rm -f "$archive"
           rm "$work/passphrase"
           test -s "$RUNNER_TEMP/estrela-supabase-backup.tar.gz.gpg"
 
