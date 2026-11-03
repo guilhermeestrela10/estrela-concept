@@ -106,9 +106,9 @@ async function products(includeInactive = false) {
   if (!includeInactive) query.set("active", "eq.true");
   const rows = await db(`products?${query}`);
   return rows.map((row: any) => {
-    const image = row.images.sort((a: any, b: any) => a.position - b.position)[0] ?? {};
+    const images = (row.images ?? []).sort((a: any, b: any) => a.position - b.position).map((image: any) => image.url);
     return { id: row.id, name: row.name, category: row.category.name, tagline: row.tagline,
-      description: row.description, price: Number(row.price), image: image.url ?? "", active: row.active,
+      description: row.description, price: Number(row.price), image: images[0] ?? "", images, active: row.active,
       variants: row.variants };
   });
 }

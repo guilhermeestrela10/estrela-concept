@@ -34,6 +34,19 @@ class StoreTests(unittest.TestCase):
         self.assertNotIn("top-teste", [item["id"] for item in self.store.products()])
         self.assertIn("top-teste", [item["id"] for item in self.store.products(include_inactive=True)])
 
+    def test_product_accepts_multiple_image_urls(self):
+        product = {
+            "id": "top-galeria", "name": "Top Galeria", "category": "Tops",
+            "tagline": "Teste", "description": "Produto de teste", "price": 50,
+            "images": ["https://example.com/frente.jpg", "https://example.com/costas.jpg"],
+            "variants": [{"size": "M", "color": "Rosa", "stock": 2}],
+        }
+        _, fields, _, _, _ = Store._validate_product(product)
+        self.assertEqual(fields["image"], product["images"][0])
+        self.assertEqual(len(fields["images"]), 2)
+        with self.assertRaises(ValueError):
+            Store._validate_product({**product, "images": product["images"] * 6})
+
     def test_checkout_persists_order_and_reserves_stock(self):
         order = self.store.create_order({"name": "Ana Teste", "phone": "86999999999"}, [
             {"productId": "legging-lua", "size": "M", "color": "Preto", "quantity": 2}

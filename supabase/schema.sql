@@ -221,7 +221,7 @@ begin
 end;
 $$;
 
-create function public.admin_save_product(p_product jsonb) returns void
+create or replace function public.admin_save_product(p_product jsonb) returns void
 language plpgsql
 security invoker
     set search_path = pg_catalog, public, pg_temp
@@ -231,6 +231,7 @@ declare
   category_id text;
   product_name text := btrim(coalesce(p_product->>'name', ''));
   image_url text := btrim(coalesce(p_product->>'image', ''));
+  image_urls jsonb := coalesce(p_product->'images', jsonb_build_array(image_url));
   variation jsonb;
   seen integer;
 begin
@@ -238,12 +239,18 @@ begin
     or length(product_name) not between 1 and 100
     or length(btrim(coalesce(p_product->>'tagline', ''))) not between 1 and 160
     or length(btrim(coalesce(p_product->>'description', ''))) not between 1 and 1200
-    or image_url !~ '^https://'
+    or jsonb_typeof(image_urls) is distinct from 'array'
+    or jsonb_array_length(image_urls) not between 1 and 10
     or coalesce((p_product->>'price')::numeric, 0) <= 0
     or coalesce((p_product->>'price')::numeric, 0) > 1000000
     or jsonb_typeof(p_product->'variants') is distinct from 'array'
     or jsonb_array_length(p_product->'variants') not between 1 and 200 then
     raise exception 'Dados do produto inválidos.';
+  end if;
+  if exists (select 1 from jsonb_array_elements(image_urls) as item(value)
+    where jsonb_typeof(value) <> 'string' or length(value #>> '{}') not between 9 and 2048
+      or value #>> '{}' !~ '^https://') then
+    raise exception 'Cada foto deve ter uma URL HTTPS válida (máximo de 2048 caracteres).';
   end if;
   select id into category_id from public.categories
     where name = btrim(p_product->>'category') and active;
@@ -274,7 +281,8 @@ begin
       active=excluded.active, updated_at=now();
   delete from public.product_images where product_images.product_id = target_product_id;
   insert into public.product_images(product_id, url, alt, position)
-    values (target_product_id, image_url, product_name, 0);
+    select target_product_id, image_url_value, product_name, image_position - 1
+    from jsonb_array_elements_text(image_urls) with ordinality as images(image_url_value, image_position);
   update public.product_variants set active=false where product_variants.product_id=target_product_id;
   for variation in select value from jsonb_array_elements(p_product->'variants')
   loop

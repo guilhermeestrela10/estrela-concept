@@ -87,7 +87,7 @@ function editProduct(product) {
   form.elements.id.value = product?.id || ""; form.elements.name.value = product?.name || "";
   form.elements.category.value = product?.category || state.categories.find(item => item.active)?.name || "";
   form.elements.price.value = product?.price ?? ""; form.elements.tagline.value = product?.tagline || "";
-  form.elements.description.value = product?.description || ""; form.elements.image.value = product?.image || "";
+  form.elements.description.value = product?.description || ""; form.elements.images.value = (product?.images || (product?.image ? [product.image] : [])).join("\n");
   form.elements.variants.value = product?.variants.map(item => `${item.size} | ${item.color} | ${item.stock}`).join("\n") || "";
   form.elements.active.checked = product?.active ?? true;
   document.querySelector("#product-form-title").textContent = product ? "Editar produto" : "Novo produto";
@@ -146,18 +146,22 @@ document.querySelector("#product-form").addEventListener("submit", async event =
       if (!size || !color || !/^\d+$/.test(stock || "")) throw new Error("Use uma variação por linha no formato: M | Preto | 5.");
       return { size, color, stock:Number(stock), active:true };
     });
-    let image = data.get("image").trim();
-    const file = form.elements.imageFile.files[0];
-    if (file) {
-      if (file.size > 4 * 1024 * 1024) throw new Error("A foto deve ter no máximo 4 MB.");
-      uploadStatus.textContent = "Enviando foto…";
+    const images = [...new Set(data.get("images").split(/\r?\n/).map(url => url.trim()).filter(Boolean))];
+    const files = [...form.elements.imageFiles.files];
+    if (images.some(url => url.length > 2048 || !/^https:\/\//i.test(url))) throw new Error("Use URLs HTTPS válidas, uma por linha.");
+    if (images.length + files.length > 10) throw new Error("O produto pode ter no máximo 10 fotos.");
+    if (files.some(file => file.size > 4 * 1024 * 1024)) throw new Error("Cada foto deve ter no máximo 4 MB.");
+    if (files.some(file => !["image/jpeg","image/png","image/webp"].includes(file.type))) throw new Error("Use apenas arquivos JPEG, PNG ou WebP.");
+    if (!images.length && !files.length) throw new Error("Informe ao menos uma URL ou escolha uma foto.");
+    for (const [index, file] of files.entries()) {
+      uploadStatus.textContent = `Enviando foto ${index + 1} de ${files.length}…`;
       const response = await fetch("/api/admin/upload-image", { method:"POST", headers:{ "Content-Type":file.type }, body:file });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Não foi possível enviar a foto.");
-      image = result.url; uploadStatus.textContent = "Foto enviada ao Supabase.";
+      if (!response.ok) throw new Error(result.error || `Não foi possível enviar a foto ${index + 1}.`);
+      images.push(result.url);
     }
-    if (!image) throw new Error("Informe a URL da foto ou escolha um arquivo.");
-    const product = { id, name:data.get("name").trim(), category:data.get("category"), price:Number(data.get("price")), tagline:data.get("tagline").trim(), description:data.get("description").trim(), image, variants, active:form.elements.active.checked };
+    uploadStatus.textContent = files.length ? `${files.length} foto(s) enviada(s) ao Supabase.` : "";
+    const product = { id, name:data.get("name").trim(), category:data.get("category"), price:Number(data.get("price")), tagline:data.get("tagline").trim(), description:data.get("description").trim(), images, image:images[0], variants, active:form.elements.active.checked };
     await api(product.id && state.products.some(item => item.id === product.id) ? `/api/admin/products/${encodeURIComponent(product.id)}` : "/api/admin/products", { method:product.id && state.products.some(item => item.id === product.id) ? "PUT":"POST", body:JSON.stringify(product) });
     document.querySelector("#product-dialog").close(); showMessage("Produto salvo com sucesso."); await refresh();
   } catch(error) { document.querySelector("#product-form-error").textContent = error.message; }

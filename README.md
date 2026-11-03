@@ -23,7 +23,7 @@ Os endereços acima usam um túnel temporário de demonstração. Ele depende de
 ### Loja
 
 - Busca e filtros por categoria, tamanho e faixa de preço.
-- Página de detalhes com descrição, imagem e variações disponíveis.
+- Página de detalhes com galeria de até 10 fotos, descrição e variações disponíveis.
 - Sacola com seleção de tamanho/cor e quantidade.
 - Validação de estoque e registro do pedido no Supabase.
 - Atalho para continuar o atendimento do pedido pelo WhatsApp.
@@ -33,7 +33,7 @@ Os endereços acima usam um túnel temporário de demonstração. Ele depende de
 
 - Login de administrador e sessão protegida.
 - Resumo de pedidos, vendas, produtos e estoque baixo.
-- Cadastro e edição de produtos, com imagens por URL HTTPS ou envio de JPEG, PNG e WebP (até 4 MB) ao Supabase Storage; inclui categorias, tamanhos, cores e estoque.
+- Cadastro e edição de produtos, com até 10 imagens por URL HTTPS ou envio de JPEG, PNG e WebP (até 4 MB por arquivo) ao Supabase Storage; inclui categorias, tamanhos, cores e estoque.
 - Controle de visibilidade dos produtos e atualização do status dos pedidos.
 
 ### Identidade visual

@@ -44,7 +44,7 @@ function setMenuOpen(open) {
 }
 
 function availableVariants(product) { return product.variants.filter(item => item.active && item.stock > 0); }
-function imageFor(product) { return safeImageUrl(product.image); }
+function imageFor(product, image = product.image) { return safeImageUrl(image); }
 function updateCartStorage() {
   try { localStorage.setItem("estrela-cart", JSON.stringify(state.cart)); cartLoadWarning = false; cartSaveWarning = false; }
   catch { cartSaveWarning = true; }
@@ -85,7 +85,8 @@ function openProduct(id) {
   const variants = availableVariants(product);
   state.selectedSize = variants[0]?.size || "";
   state.selectedColor = variants.find(item => item.size === state.selectedSize)?.color || "";
-  document.querySelector("#product-detail").innerHTML = `<div class="detail-layout"><img src="${imageFor(product)}" alt="${escapeHTML(product.name)}"><div class="detail-copy"><p class="eyebrow">${escapeHTML(String(product.category).toUpperCase())} · ESTRELA CONCEPT</p><h2>${escapeHTML(product.name)}</h2><div class="detail-price">${money(product.price)}</div><p>${escapeHTML(product.description)}</p><p class="detail-label">Tamanho</p><div class="option-list" id="size-options"></div><p class="detail-label">Cor</p><div class="option-list" id="color-options"></div><p class="detail-status" id="detail-status"></p><button class="button button-dark" id="add-to-cart">Adicionar à sacola <span>↗</span></button></div></div>`;
+  const images = product.images?.length ? product.images : [product.image];
+  document.querySelector("#product-detail").innerHTML = `<div class="detail-layout"><div class="detail-gallery"><img class="detail-gallery-main" src="${imageFor(product, images[0])}" alt="${escapeHTML(product.name)} — foto 1">${images.length > 1 ? `<div class="detail-thumbnails" aria-label="Fotos do produto">${images.map((image, index) => `<button class="detail-thumbnail${index === 0 ? " selected" : ""}" type="button" data-gallery-image="${index}" aria-label="Mostrar foto ${index + 1}" aria-pressed="${index === 0}"><img src="${imageFor(product, image)}" alt=""></button>`).join("")}</div>` : ""}</div><div class="detail-copy"><p class="eyebrow">${escapeHTML(String(product.category).toUpperCase())} · ESTRELA CONCEPT</p><h2>${escapeHTML(product.name)}</h2><div class="detail-price">${money(product.price)}</div><p>${escapeHTML(product.description)}</p><p class="detail-label">Tamanho</p><div class="option-list" id="size-options"></div><p class="detail-label">Cor</p><div class="option-list" id="color-options"></div><p class="detail-status" id="detail-status"></p><button class="button button-dark" id="add-to-cart">Adicionar à sacola <span>↗</span></button></div></div>`;
   renderVariantOptions(product);
   dialog.showModal();
   const url = new URL(window.location.href); url.searchParams.set("produto", id); history.replaceState({}, "", url);
@@ -175,6 +176,21 @@ grid.addEventListener("click", event => {
 });
 grid.addEventListener("keydown", event => { if ((event.key === "Enter" || event.key === " ") && event.target.matches("[data-product]")) { event.preventDefault(); openProduct(event.target.dataset.product); } });
 document.querySelector("#product-detail").addEventListener("click", event => {
+  const thumbnail = event.target.closest("[data-gallery-image]");
+  if (thumbnail) {
+    const productId = new URLSearchParams(location.search).get("produto");
+    const product = state.products.find(item => item.id === productId);
+    const index = Number(thumbnail.dataset.galleryImage);
+    const image = product?.images?.[index];
+    if (image) {
+      const main = document.querySelector(".detail-gallery-main");
+      main.src = imageFor(product, image); main.alt = `${product.name} — foto ${index + 1}`;
+      document.querySelectorAll("[data-gallery-image]").forEach(button => {
+        const selected = button === thumbnail; button.classList.toggle("selected", selected); button.setAttribute("aria-pressed", String(selected));
+      });
+    }
+    return;
+  }
   const sizeButton = event.target.closest("[data-size]");
   const colorButton = event.target.closest("[data-color]");
   const productId = new URLSearchParams(location.search).get("produto");

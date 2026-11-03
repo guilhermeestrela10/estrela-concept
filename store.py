@@ -203,9 +203,17 @@ class Store:
         product_id = product.get("id")
         if not isinstance(product_id, str) or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", product_id) or len(product_id) > 70:
             raise ValueError("O código do produto deve usar letras minúsculas, números e hífens.")
-        fields = {key: product.get(key) for key in ("name", "category", "tagline", "description", "image")}
-        limits = {"name": 100, "category": 60, "tagline": 160, "description": 1200, "image": 2048}
-        for key, value in fields.items():
+        images = product.get("images", [product.get("image")])
+        if not isinstance(images, list) or not 1 <= len(images) <= 10:
+            raise ValueError("Cadastre de 1 a 10 fotos para o produto.")
+        if any(not isinstance(image, str) or not image.strip() or len(image.strip()) > 2048
+               or not image.strip().startswith(("https://", "/static/")) for image in images):
+            raise ValueError("Cada foto deve usar HTTPS ou um caminho local /static/.")
+        fields = {key: product.get(key) for key in ("name", "category", "tagline", "description")}
+        fields["image"] = images[0].strip()
+        fields["images"] = [image.strip() for image in images]
+        limits = {"name": 100, "category": 60, "tagline": 160, "description": 1200}
+        for key, value in ((key, fields[key]) for key in limits):
             if not isinstance(value, str) or not value.strip() or len(value.strip()) > limits[key]:
                 raise ValueError(f"Preencha {key} com até {limits[key]} caracteres.")
         if not fields["image"].startswith(("https://", "/static/")):
@@ -278,7 +286,7 @@ class Store:
                 variants = db.execute("SELECT size,color,stock,active FROM variants WHERE product_id=? ORDER BY size,color", (row["id"],)).fetchall()
                 result.append({"id": row["id"], "name": row["name"], "category": row["category"],
                     "tagline": row["tagline"], "description": row["description"], "price": row["price_cents"] / 100,
-                    "image": row["image"], "active": bool(row["active"]),
+                    "image": row["image"], "images": [row["image"]], "active": bool(row["active"]),
                     "variants": [{"size": v["size"], "color": v["color"], "stock": v["stock"], "active": bool(v["active"])} for v in variants]})
             return result
 
