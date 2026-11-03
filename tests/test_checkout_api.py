@@ -273,12 +273,15 @@ class CheckoutApiTests(unittest.TestCase):
         self.assertEqual(summary["products"], 5)
         self.assertEqual(summary["orders"], 0)
 
-    def test_policies_page_is_served_and_has_review_notice(self):
+    def test_policies_page_is_published_and_separates_defects_from_online_cancellation(self):
         with urlopen(f"{self.base_url}/politicas", timeout=2) as response:
             page = response.read().decode("utf-8")
         self.assertEqual(response.status, 200)
-        self.assertIn("Rascunho para revisão", page)
-        self.assertIn("direito de arrependimento", page)
+        self.assertNotIn("Rascunho para revisão", page)
+        self.assertIn("Troca e atendimento por defeito", page)
+        self.assertIn("Direito de desistir da compra online", page)
+        self.assertIn("7 dias", page)
+        self.assertIn("CPF/CNPJ da fornecedora não foram informados", page)
 
     def test_https_response_includes_hsts(self):
         request = Request(f"{self.base_url}/", headers={"X-Forwarded-Proto": "https"})

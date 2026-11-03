@@ -154,9 +154,9 @@ Estas configurações são privadas e devem existir apenas no serviço que as us
 
 O `.gitignore` exclui arquivos `.env`, bancos SQLite em `data/`, logs do servidor e toda a pasta gerada `graphify-out/`. O banco local e os metadados do Graphify estão no computador, mas não fazem parte do histórico publicado.
 
-### Políticas para revisão
+### Políticas da loja
 
-A rota [`/politicas`](https://estrela-concept.onrender.com/politicas) reúne rascunhos de privacidade, pagamento e entrega, trocas e devoluções. A página está marcada como rascunho e não deve ser considerada política jurídica final. Antes da abertura ao público, a responsável precisa conferir o texto e completar endereço físico, dados cadastrais, regiões de entrega, modalidades, custos, prazos, regras práticas de devolução e prazos de retenção dos dados. O texto preserva o direito legal de arrependimento nas compras online.
+A rota [`/politicas`](https://estrela-concept.onrender.com/politicas) apresenta a política de privacidade e explica pedidos, pagamento, entrega e atendimento de produtos com defeito. A troca por defeito está separada do direito legal de desistir de uma compra online; esse direito de 7 dias não pode ser removido. A página foi escrita com base nas regras brasileiras citadas nela, mas ainda falta a responsável informar o CPF/CNPJ e o endereço físico da fornecedora. Antes de vender ao público, também é necessário confirmar regiões, modalidades, custos e prazos de entrega, procedimentos práticos de devolução e os prazos internos de retenção dos dados. O texto não substitui uma análise jurídica individual.
 
 ### Backup automático do banco
 
@@ -196,7 +196,7 @@ O projeto mantém os arquivos de entrada do serviço na raiz para que o Render e
 | Caminho | Finalidade |
 | --- | --- |
 | `index.html` | Página principal da loja |
-| `politicas.html` | Rascunhos de privacidade e políticas comerciais |
+| `politicas.html` | Política de privacidade, pedidos, entrega, defeitos e desistência online |
 | `admin.html` | Interface administrativa restrita |
 | `server.py` | Servidor web, segurança HTTP, rotas e avisos por e-mail |
 | `store.py` | Comunicação com o Supabase e armazenamento SQLite para testes |

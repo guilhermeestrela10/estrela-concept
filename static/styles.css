@@ -110,8 +110,8 @@ footer small { font-size: 9px; }
 .policy-main { width: min(820px, 100% - 40px); margin: 72px auto 90px; }
 .policy-main > h1 { margin: 0 0 22px; font: 500 clamp(40px,7vw,68px)/1.03 var(--serif); letter-spacing: -.045em; }
 .policy-main > h1 em { color: var(--pink-dark); }
-.policy-draft { padding: 16px 18px; border-left: 3px solid var(--pink-dark); background: #faeeee; color: #655c5e; font-size: 12px; line-height: 1.7; }
-.policy-draft strong { color: var(--ink); }
+.policy-notice { padding: 16px 18px; border-left: 3px solid var(--pink-dark); background: #faeeee; color: #655c5e; font-size: 12px; line-height: 1.7; }
+.policy-notice strong { color: var(--ink); }
 .policy-index { display: flex; flex-wrap: wrap; gap: 10px 22px; padding: 22px 0; border-bottom: 1px solid var(--line); }
 .policy-index a, .policy-section a { color: var(--pink-dark); text-decoration: underline; text-underline-offset: 3px; }
 .policy-index a { font-size: 12px; }
