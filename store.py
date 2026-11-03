@@ -35,6 +35,8 @@ class SupabaseStore:
     def admin_configured(self): return self._call("admin_status")["configured"]
     def setup_admin(self, username, password): return self._call("admin_setup", username=username, password=password)
     def admin_login(self, username, password): return self._call("admin_login", username=username, password=password)
+    def request_admin_password_reset(self, username, redirect_to): return self._call("admin_password_recovery", username=username, redirectTo=redirect_to)
+    def update_admin_password(self, access_token, password): return self._call("admin_password_update", accessToken=access_token, password=password)
     def admin_session_valid(self, session_token):
         return bool(self._call("admin_session", sessionToken=session_token)["authenticated"])
     def admin_logout(self, session_token): self._call("admin_logout", sessionToken=session_token)

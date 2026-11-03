@@ -42,6 +42,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
     store = None
     sessions = {}
     login_attempts = defaultdict(deque)
+    recovery_attempts = defaultdict(deque)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
@@ -142,7 +143,8 @@ class StoreHandler(SimpleHTTPRequestHandler):
         if path == "/api/admin/session":
             self.send_json({"configured": self.get_store().admin_configured(), "authenticated": bool(self.admin_session()),
                 "setupTokenRequired": bool(ADMIN_SETUP_TOKEN) and not self.local_setup_allowed(),
-                "setupAllowed": self.local_setup_allowed() or bool(ADMIN_SETUP_TOKEN)})
+                "setupAllowed": self.local_setup_allowed() or bool(ADMIN_SETUP_TOKEN),
+                "recoveryAvailable": isinstance(self.get_store(), SupabaseStore)})
             return
         if path.startswith("/api/admin/") and path != "/api/admin/login":
             if not self.require_admin():
@@ -223,6 +225,46 @@ class StoreHandler(SimpleHTTPRequestHandler):
             payload = self.read_json()
             if not self.origin_is_same():
                 self.send_json({"error": "Origem da solicitação não permitida."}, 403)
+                return
+            if path == "/api/admin/password-recovery":
+                store = self.get_store()
+                if not isinstance(store, SupabaseStore):
+                    self.send_json({"error": "A recuperação de senha exige conexão com o Supabase."}, 503)
+                    return
+                attempts = self.__class__.recovery_attempts[self.client_ip()]
+                now = time.monotonic()
+                while attempts and now - attempts[0] > 300:
+                    attempts.popleft()
+                if len(attempts) >= 5:
+                    self.send_json({"error": "Muitas solicitações. Aguarde 5 minutos antes de tentar novamente."}, 429)
+                    return
+                attempts.append(now)
+                username = payload.get("username")
+                if not isinstance(username, str) or not 4 <= len(username) <= 40:
+                    self.send_json({"error": "Informe seu usuário do painel."}, 400)
+                    return
+                try:
+                    store.request_admin_password_reset(username, "https://estrela-concept.onrender.com/admin")
+                except ValueError:
+                    self.send_json({"error": "Não foi possível solicitar a recuperação agora. Tente novamente mais tarde."}, 503)
+                    return
+                self.send_json({"ok": True, "message": "Se os dados corresponderem à conta, você receberá instruções no e-mail cadastrado."})
+                return
+            if path == "/api/admin/password-update":
+                store = self.get_store()
+                token, password = payload.get("accessToken"), payload.get("password")
+                if not isinstance(store, SupabaseStore):
+                    self.send_json({"error": "A redefinição de senha exige conexão com o Supabase."}, 503)
+                    return
+                if not isinstance(token, str) or not 20 <= len(token) <= 4096 or not isinstance(password, str) or not 12 <= len(password) <= 256:
+                    self.send_json({"error": "Link inválido ou expirado. Solicite uma nova recuperação."}, 400)
+                    return
+                try:
+                    store.update_admin_password(token, password)
+                except ValueError:
+                    self.send_json({"error": "Link inválido ou expirado, ou senha não aceita. Solicite uma nova recuperação."}, 400)
+                    return
+                self.send_json({"ok": True}, 200, {"Set-Cookie": "estrela_admin=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0"})
                 return
             if path == "/api/admin/setup":
                 store = self.get_store()

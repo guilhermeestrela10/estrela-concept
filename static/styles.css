@@ -355,6 +355,7 @@ footer small { font-size: 9px; }
 .admin-auth input { width: 100%; padding: 12px; border: 1px solid var(--line); background: white; color: var(--ink); }
 .admin-auth .form-error { margin: 0; }
 .admin-auth .button { width: 100%; }
+.admin-auth .auth-link { justify-self: center; border: 0; padding: 4px; background: transparent; color: var(--pink-dark); font: inherit; font-size: 11px; text-decoration: underline; cursor: pointer; }
 @media(max-width:700px) {
   .admin-main { padding: 35px 16px 65px; }
   .admin-header { padding: 0 16px; }

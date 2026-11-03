@@ -4,16 +4,23 @@ const statusNames = {novo:"Novo", em_andamento:"Em andamento", concluido:"Conclu
 const state = { products: [], orders: [], categories: [] };
 const notice = document.querySelector("#admin-notice");
 let imageItems = [];
+const recoveryHash = new URLSearchParams(location.hash.slice(1));
+let recoveryAccessToken = recoveryHash.get("type") === "recovery" ? recoveryHash.get("access_token") || "" : "";
+const recoveryLinkError = recoveryHash.has("error") || recoveryHash.has("error_code");
+if (recoveryAccessToken || recoveryLinkError) history.replaceState(null, "", location.pathname + location.search);
 async function api(path, options = {}) {
   const response = await fetch(path, { ...options, headers: { "Content-Type":"application/json", ...(options.headers || {}) } });
   const body = await response.json();
-  if (response.status === 401 && path.startsWith("/api/admin/") && !["/api/admin/login","/api/admin/setup"].includes(path)) {
+  if (response.status === 401 && path.startsWith("/api/admin/") && !["/api/admin/login","/api/admin/setup","/api/admin/password-update"].includes(path)) {
     fetch("/api/admin/session").then(result => result.json()).then(session => showAuth(!session.configured, session.setupTokenRequired, session.setupAllowed));
   }
   if (!response.ok) throw new Error(body.error || "Não foi possível concluir a operação.");
   return body;
 }
 function showAuth(setup, tokenRequired = false, setupAllowed = true) {
+  document.querySelector("#auth-form").hidden = false;
+  document.querySelector("#recovery-form").hidden = true;
+  document.querySelector("#reset-form").hidden = true;
   document.querySelector("#admin-auth").hidden = false;
   document.querySelector("#admin-app").hidden = true;
   document.querySelector("#logout").hidden = true;
@@ -24,10 +31,20 @@ function showAuth(setup, tokenRequired = false, setupAllowed = true) {
     ? "Crie o acesso de administrador, protegido pelo Supabase Auth. Use pelo menos 12 caracteres."
     : "Entre com seu usuário e senha.";
   document.querySelector("#auth-submit").textContent = setup ? "Criar acesso e entrar" : "Entrar";
+  document.querySelector("#forgot-password").hidden = setup || !window.recoveryAvailable;
   document.querySelector("#auth-error").textContent = "";
   if (setup && !setupAllowed) document.querySelector("#auth-error").textContent = "A configuração inicial foi bloqueada. Defina ESTRELA_ADMIN_SETUP_TOKEN no servidor ou configure o acesso localmente antes da publicação.";
   document.querySelector('#auth-form [name="password"]').value = "";
   document.querySelector('#auth-form [name="confirmPassword"]').value = "";
+}
+function showPasswordReset() {
+  document.querySelector("#admin-auth").hidden = false;
+  document.querySelector("#admin-app").hidden = true;
+  document.querySelector("#logout").hidden = true;
+  document.querySelector("#auth-form").hidden = true;
+  document.querySelector("#recovery-form").hidden = true;
+  document.querySelector("#reset-form").hidden = false;
+  if (!recoveryAccessToken) document.querySelector("#reset-error").textContent = "Link inválido ou expirado. Solicite uma nova recuperação.";
 }
 function showAdmin() {
   document.querySelector("#admin-auth").hidden = true;
@@ -144,6 +161,41 @@ document.querySelector("#auth-form").addEventListener("submit", async event => {
   } catch(error) { document.querySelector("#auth-error").textContent = error.message; }
   finally { submit.disabled = false; }
 });
+document.querySelector("#forgot-password").addEventListener("click", () => {
+  document.querySelector("#auth-form").hidden = true;
+  document.querySelector("#recovery-form").hidden = false;
+  document.querySelector("#recovery-error").textContent = "";
+});
+document.querySelector("#recovery-cancel").addEventListener("click", () => showAuth(false));
+document.querySelector("#reset-cancel").addEventListener("click", () => showAuth(false));
+document.querySelector("#recovery-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const submit = form.querySelector("button[type=submit],button:not([type])");
+  submit.disabled = true;
+  try {
+    const result = await api("/api/admin/password-recovery", { method:"POST", body:JSON.stringify({ username:form.elements.username.value.trim() }) });
+    document.querySelector("#recovery-error").textContent = result.message;
+  } catch (error) { document.querySelector("#recovery-error").textContent = error.message; }
+  finally { submit.disabled = false; }
+});
+document.querySelector("#reset-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const error = document.querySelector("#reset-error");
+  if (!recoveryAccessToken) return;
+  if (form.elements.password.value !== form.elements.confirmPassword.value) { error.textContent = "As senhas não coincidem."; return; }
+  const submit = form.querySelector("button[type=submit],button:not([type])");
+  submit.disabled = true;
+  try {
+    await api("/api/admin/password-update", { method:"POST", body:JSON.stringify({ accessToken:recoveryAccessToken, password:form.elements.password.value }) });
+    recoveryAccessToken = "";
+    form.reset();
+    showAuth(false);
+    document.querySelector("#auth-error").textContent = "Senha alterada. Entre com sua nova senha.";
+  } catch (e) { error.textContent = e.message; }
+  finally { submit.disabled = false; }
+});
 document.querySelector("#logout").addEventListener("click", async () => {
   try { await api("/api/admin/logout", {method:"POST",body:"{}"}); showAuth(false); }
   catch(error) { showError(error); }
@@ -240,6 +292,13 @@ document.querySelector("#orders-list").addEventListener("change", async event =>
   catch(error) { showError(error); await refresh(); }
 });
 api("/api/admin/session").then(session => {
-  if (session.authenticated) { showAdmin(); refresh(); }
-  else showAuth(!session.configured, session.setupTokenRequired, session.setupAllowed);
+  window.recoveryAvailable = session.recoveryAvailable;
+  if (recoveryAccessToken || recoveryLinkError) {
+    showPasswordReset();
+    if (recoveryLinkError) document.querySelector("#reset-error").textContent = "Link inválido ou expirado. Solicite uma nova recuperação.";
+  } else if (session.authenticated) { showAdmin(); refresh(); }
+  else {
+    showAuth(!session.configured, session.setupTokenRequired, session.setupAllowed);
+    if (recoveryLinkError) document.querySelector("#auth-error").textContent = "Link inválido ou expirado. Solicite uma nova recuperação.";
+  }
 }).catch(showError);

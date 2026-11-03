@@ -1,6 +1,6 @@
 # Estrela Concept
 
-**Seu estilo, seu brilho.** Uma loja virtual de moda fitness com catálogo, sacola, pedidos pelo WhatsApp e painel administrativo. O projeto está em fase de demonstração: os cinco produtos cadastrados são exemplos e devem ser trocados pelos dados reais antes da abertura ao público.
+**Seu estilo, seu brilho.** Uma loja virtual de moda fitness com catálogo, sacola, pedidos pelo WhatsApp e painel administrativo. O projeto está em fase de demonstração: há sete produtos cadastrados no Supabase, dos quais cinco estão visíveis; todos são exemplos e devem ser conferidos e substituídos antes da abertura ao público.
 
 <p align="center">
   <img src="static/brand-horizontal.png" alt="Estrela Concept" width="300">
@@ -32,6 +32,7 @@ O site está hospedado no plano gratuito do Render e não depende desta máquina
 ### Painel administrativo
 
 - Login de administrador e sessão protegida.
+- Recuperação de senha pelo e-mail cadastrado no Supabase Auth; a redefinição encerra as sessões administrativas existentes.
 - Resumo de pedidos, vendas, produtos e estoque baixo.
 - Cadastro e edição de produtos, com até 10 imagens por URL HTTPS ou envio de JPEG, PNG e WebP (até 4 MB por arquivo) ao Supabase Storage; inclui categorias, tamanhos, cores e estoque.
 - Controle de visibilidade dos produtos e atualização do status dos pedidos.
@@ -99,7 +100,7 @@ O texto acima é apenas um exemplo de configuração. Não coloque o token real 
 
 Abra `/admin` e entre com a conta administrativa configurada para o projeto. A senha não fica armazenada neste repositório. Se o Supabase ainda não tiver uma conta administrativa, a configuração inicial só pode ser feita uma vez e exige uma solicitação local ou o token de configuração definido no servidor. Não tente recriar uma conta já configurada.
 
-O endereço de recuperação está configurado, e a proprietária informa que a configuração de e-mail está concluída. O painel ainda não tem uma tela própria de redefinição de senha. As credenciais administrativas atuais foram mantidas conforme solicitado para esta demonstração. A proteção contra senhas vazadas permanece desativada porque a opção exige um plano superior do Supabase.
+O endereço de recuperação está cadastrado no Supabase Auth, e a proprietária informa que a configuração de e-mail está concluída. No login, use **Esqueci minha senha** para solicitar um link e definir uma senha nova. As credenciais administrativas atuais foram mantidas conforme solicitado para esta demonstração. A proteção contra senhas vazadas permanece desativada porque a opção exige um plano superior do Supabase.
 
 ## Como funciona um pedido
 
@@ -144,7 +145,7 @@ Os testes usam um banco SQLite temporário e cobrem pedidos, validação de esto
 ### Disponível para demonstração
 
 - Loja, painel administrativo e fluxo de pedido integrados ao Supabase.
-- Cinco produtos de demonstração editáveis pelo painel.
+- Sete produtos de demonstração no banco (cinco visíveis), editáveis pelo painel.
 - Pagamento, entrega e atendimento direcionados ao WhatsApp.
 - Identidade visual oficial aplicada na loja e no painel.
 
@@ -156,6 +157,6 @@ Os testes usam um banco SQLite temporário e cobrem pedidos, validação de esto
 - Configurar backups e revisar as proteções do banco no ambiente de produção; tabelas e sequências estão bloqueadas para `anon` e `authenticated`, com RLS ativo e acesso apenas pelo serviço.
 - Testar cadastro e edição de produtos, estoque, pedido, login e WhatsApp no domínio final, em computadores e celulares reais.
 
-**Observações de segurança:** a proteção contra senhas vazadas está desativada no plano atual. A proprietária optou por manter as credenciais administrativas e a chave de serviço atuais durante a demonstração. Reavaliar essas escolhas ao preparar o ambiente de produção. O endereço de recuperação está cadastrado, mas o painel não inclui um fluxo de redefinição de senha.
+**Observações de segurança:** a proteção contra senhas vazadas está desativada no plano atual. A proprietária optou por manter as credenciais administrativas e a chave de serviço atuais durante a demonstração. Reavaliar essas escolhas ao preparar o ambiente de produção. O fluxo de recuperação do painel usa o endereço do site de demonstração como destino; ao configurar um domínio próprio, atualizar e liberar esse endereço nas configurações de URL do Supabase Auth.
 
 **Lembrete solicitado:** quando os itens acima estiverem concluídos, fazer a revisão final de segurança, backups, políticas e funcionamento antes de divulgar a loja.

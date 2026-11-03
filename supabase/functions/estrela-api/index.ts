@@ -27,7 +27,7 @@ async function auth(path: string, method: string, body: unknown, key: string, ac
   const response = await fetch(`${apiUrl}/auth/v1/${path}`, {
     method,
     headers: { apikey: key, "Content-Type": "application/json", ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
-    body: JSON.stringify(body),
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   const text = await response.text();
   return { response, data: text ? JSON.parse(text) : null };
@@ -98,6 +98,39 @@ async function adminLogin(payload: any) {
   return { ok: true, sessionToken: token, expiresAt };
 }
 
+async function requestAdminPasswordReset(payload: any) {
+  const username = typeof payload.username === "string" ? payload.username : "";
+  const redirectTo = typeof payload.redirectTo === "string" ? payload.redirectTo : "";
+  let redirect: URL;
+  try { redirect = new URL(redirectTo); } catch { throw new ApiError("Invalid password recovery request.", 400); }
+  if (!/^[A-Za-z0-9_-]{4,40}$/.test(username) || redirect.origin !== "https://estrela-concept.onrender.com"
+      || redirect.pathname !== "/admin" || redirect.search || redirect.hash) {
+    throw new ApiError("Invalid password recovery request.", 400);
+  }
+  const query = new URLSearchParams({ select: "email", id: "eq.true", username: `eq.${username}` });
+  const accounts = await db(`admin_accounts?${query}`);
+  if (!accounts.length) return { ok: true };
+  const result = await auth(`recover?redirect_to=${encodeURIComponent(redirectTo)}`, "POST", { email: accounts[0].email }, publishableKey);
+  if (!result.response.ok) throw new ApiError("Password recovery is temporarily unavailable.", result.response.status === 429 ? 429 : 503);
+  return { ok: true };
+}
+
+async function updateAdminPassword(payload: any) {
+  const accessToken = typeof payload.accessToken === "string" ? payload.accessToken : "";
+  const password = typeof payload.password === "string" ? payload.password : "";
+  if (accessToken.length < 20 || accessToken.length > 4096 || password.length < 12 || password.length > 256) {
+    throw new ApiError("Invalid password recovery request.", 400);
+  }
+  const currentUser = await auth("user", "GET", undefined, publishableKey, accessToken);
+  if (!currentUser.response.ok || typeof currentUser.data?.id !== "string") throw new ApiError("Recovery link is invalid or expired.", 400);
+  const account = await db(`admin_accounts?select=auth_user_id&id=eq.true&auth_user_id=eq.${currentUser.data.id}`);
+  if (account.length !== 1) throw new ApiError("Recovery link is invalid or expired.", 400);
+  const updated = await auth("user", "PUT", { password }, publishableKey, accessToken);
+  if (!updated.response.ok) throw new ApiError("The new password was rejected.", 400);
+  await db(`admin_sessions?user_id=eq.${account[0].auth_user_id}`, "DELETE");
+  return { ok: true };
+}
+
 async function products(includeInactive = false) {
   const query = new URLSearchParams({
     select: "id,name,tagline,description,price,active,category:categories(name),images:product_images(url,alt,position),variants:product_variants(size,color,stock,active)",
@@ -156,6 +189,8 @@ async function handle(action: string, payload: any) {
   if (action === "admin_status") return { configured: (await db("admin_accounts?select=id")).length > 0 };
   if (action === "admin_setup") return await createAdmin(payload);
   if (action === "admin_login") return await adminLogin(payload);
+  if (action === "admin_password_recovery") return await requestAdminPasswordReset(payload);
+  if (action === "admin_password_update") return await updateAdminPassword(payload);
   if (action === "admin_session") return { authenticated: await validSession(payload.sessionToken) };
   if (action === "admin_logout") {
     if (typeof payload.sessionToken === "string") {
