@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: estrela-concept
+    runtime: python
+    plan: free
+    buildCommand: python -m compileall -q .
+    startCommand: python server.py
+    healthCheckPath: /api/status
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: ESTRELA_EDGE_API_TOKEN
+        sync: false

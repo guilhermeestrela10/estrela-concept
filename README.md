@@ -78,6 +78,12 @@ Depois, acesse:
 
 O endpoint de status deve indicar `supabase`. Para encerrar o servidor, pressione `Ctrl+C` no terminal. As configurações `HOST` e `PORT` podem ser substituídas por variáveis de ambiente. O padrão é `127.0.0.1:8000`.
 
+## Hospedagem de demonstração no Render
+
+O arquivo `render.yaml` prepara o servidor Python para o Render e pede o token privado `ESTRELA_EDGE_API_TOKEN` como variável secreta durante a criação do serviço. Não coloque esse token no GitHub. O serviço pode receber um endereço `onrender.com`; para usar domínio próprio, registre o domínio e configure o DNS no painel da hospedagem.
+
+O plano gratuito serve para prévia, mas pode suspender o serviço quando fica sem uso e não é recomendado pelo Render para produção. Para deixar a demonstração continuamente ativa, selecione uma instância paga no painel do Render; confirme o preço exibido antes de contratar. A loja continuará dependendo do Supabase configurado em `store.py`.
+
 ### Token privado da API
 
 O servidor precisa de `ESTRELA_EDGE_API_TOKEN` para se comunicar com a Edge Function. No computador de demonstração, o valor é lido do arquivo privado indicado acima. Também é possível fornecê-lo no ambiente antes de iniciar o servidor:
