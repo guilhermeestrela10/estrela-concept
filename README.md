@@ -11,7 +11,7 @@
   <a href="https://github.com/guilhermeestrela10/estrela-concept">Repositório no GitHub</a>
 </p>
 
-> **Estado do projeto:** demonstração funcional. O catálogo contém produtos de exemplo. Antes de vender ao público, a loja precisa receber o catálogo verdadeiro, políticas finais e uma hospedagem/domínio escolhidos pela proprietária.
+> **Estado do projeto:** demonstração funcional em `https://estrela-concept.onrender.com`. O código mais recente está na branch `main`; o catálogo ainda contém produtos de exemplo e algumas integrações de produção dependem de configuração externa. Veja a lista de conclusão no fim deste documento antes de abrir a loja para vendas.
 
 ## Sobre o projeto
 
@@ -58,7 +58,7 @@ flowchart LR
   API --> Auth[Supabase Auth]
   API --> Banco[(Supabase Database)]
   API --> Fotos[Supabase Storage]
-  Servidor --> Gmail[Gmail da loja · aviso de pedido]
+  Servidor --> Resend[Resend · aviso de pedido]
   Admin[Administradora em /admin] --> Servidor
 ```
 
@@ -219,14 +219,51 @@ O código está conectado ao repositório GitHub e à hospedagem atual no Render
 
 A migração será planejada quando a proprietária escolher e contratar um plano Hostinger. Antes de mover o site, vamos confirmar que o plano aceita o servidor Python e o modo de execução necessários. A migração deverá configurar variáveis secretas, HTTPS, domínio e redirecionamentos de recuperação no Supabase, testar o painel, pedidos, estoque, imagens e notificações de e-mail, mantendo o Supabase como banco enquanto for adequado. Não é necessário comprar domínio agora; ele pode ser conectado depois.
 
-## O que falta antes de vender ao público
+## Branches e publicação
 
-1. Cadastrar produtos verdadeiros: fotos, descrições, preços, tamanhos, cores e estoque.
-2. Escolher e contratar domínio e hospedagem permanentes.
-3. Revisar e finalizar as políticas em `/politicas`, incluindo os dados da empresa e as condições comerciais que ainda faltam.
-4. Cadastrar os dois segredos do GitHub Actions e confirmar uma execução de backup bem-sucedida; planejar cópia independente das imagens no Supabase Storage.
-5. Trocar a senha de administrador e as chaves que foram compartilhadas, habilitar a proteção contra senhas vazadas quando o plano permitir e revisar MFA/contas com acesso ao Supabase.
-6. Conferir a lista de URLs permitidas para recuperação de senha no Supabase e validar o envio de e-mails.
-7. Fazer uma revisão final no domínio definitivo em computador e celular, sem criar pedidos reais desnecessários.
+O trabalho do branch `auditoria-seguranca` foi revisado e incorporado à `main` pelo [Pull Request #2](https://github.com/guilhermeestrela10/estrela-concept/pull/2). O branch separado continua no GitHub como referência, mas não é o branch publicado. O serviço do Render está configurado para acompanhar a `main`. Assim, alterações de segurança já mescladas fazem parte do código principal; não é necessário manter o deploy apontado para `auditoria-seguranca`.
 
-**Combinado:** quando domínio, hospedagem, catálogo e políticas estiverem definidos, fazer uma revisão final de segurança, backups e funcionamento antes da divulgação pública.
+Depois de cada publicação, confirme no Render que o deploy terminou com sucesso e está usando o commit mais recente da `main`. Uma página responder HTTP 200, por si só, não prova que o código novo já foi publicado.
+
+## Lista para concluir o projeto
+
+O site está pronto para demonstração. Os itens abaixo precisam ser concluídos ou confirmados pela responsável antes de anunciar vendas ao público:
+
+### Conteúdo e regras comerciais
+
+- [ ] Substituir os produtos de demonstração por cadastro real: nome, descrição, preço, fotos, tamanhos, cores e quantidades em estoque. Isso pode ser feito pelo painel administrativo depois da validação dos dados.
+- [ ] Conferir se cada foto pode ser usada comercialmente e se corresponde ao produto e às variações exibidas.
+- [ ] Revisar e aprovar a página `/politicas`: informar os dados de identificação e contato da loja, regiões atendidas, opções e custos de entrega, prazos e regras práticas para troca e devolução. Pagamento e atendimento continuam combinados pelo WhatsApp.
+- [ ] Confirmar os dados públicos da loja, especialmente telefone/WhatsApp, e-mail de contato e nome da responsável.
+
+### E-mail de pedidos e atendimento
+
+- [ ] Criar uma chave de API no Resend e cadastrá-la como `RESEND_API_KEY` diretamente nas variáveis privadas do Render.
+- [ ] Definir `ORDER_NOTIFICATION_EMAIL` com o endereço que deve receber os pedidos.
+- [ ] Verificar um domínio de envio no Resend e configurar `RESEND_FROM_EMAIL` com um remetente autorizado. O endereço de demonstração `onboarding@resend.dev` tem limitações e não é substituto de um remetente da loja validado.
+- [ ] Salvar as variáveis e aguardar o deploy do Render. Fazer um pedido de teste e confirmar a chegada do e-mail, o link protegido para `/admin` e a conversa com a cliente pelo WhatsApp. O código não reenvia automaticamente avisos que falharem; confira o pedido no painel mesmo quando a mensagem de e-mail não chegar.
+
+### Backup e recuperação
+
+- [ ] Criar `SUPABASE_DB_URL` e `BACKUP_ENCRYPTION_PASSPHRASE` em **GitHub → Settings → Secrets and variables → Actions**. A frase deve ter pelo menos 24 caracteres, ser exclusiva e ficar guardada fora do GitHub.
+- [ ] Executar **Actions → Backup criptografado do Supabase → Run workflow** e confirmar que a execução terminou com sucesso e produziu o artefato criptografado.
+- [ ] Fazer um teste de restauração em um ambiente separado antes de depender do backup. O fluxo atual guarda os artefatos por 30 dias e não inclui os esquemas Supabase `auth` e `storage`; planejar separadamente cópia das imagens e recuperação da conta administrativa.
+- [ ] Definir como guardar uma segunda cópia da frase de descriptografia. Sem ela, o artefato não pode ser recuperado.
+
+### Segurança das contas
+
+- [ ] Trocar, antes das vendas, a senha administrativa e quaisquer chaves que tenham sido compartilhadas fora dos gestores de segredos; atualizar somente as configurações privadas correspondentes.
+- [ ] Revisar quem tem acesso de administrador ao GitHub, Render e Supabase, ativar autenticação multifator nessas contas e remover acessos que não sejam mais necessários.
+- [ ] Habilitar a proteção contra senhas vazadas no Supabase quando o plano permitir. A opção está desativada no plano atual.
+- [ ] Confirmar que os links de recuperação de senha do Supabase incluem os endereços finais do site e que o e-mail de recuperação chega à conta correta.
+- [ ] Manter segredos fora do repositório público. Se um segredo aparecer no Git, em logs ou em mensagens, revogá-lo e criar outro; apagar o arquivo atual não remove a cópia do histórico do Git.
+
+### Domínio, hospedagem e validação final
+
+- [ ] Escolher e contratar domínio e hospedagem permanentes. Antes de migrar para a Hostinger, confirmar que o plano escolhido suporta o servidor Python do projeto, tarefas e armazenamento necessários; manter o Supabase como banco se essa continuar sendo a arquitetura desejada.
+- [ ] Configurar domínio, HTTPS, variáveis secretas, domínio de recuperação do Supabase e remetente de e-mail no ambiente escolhido. Não publicar credenciais em arquivos do site ou no GitHub.
+- [ ] Confirmar que o domínio aponta para o deploy esperado e que o serviço usa a versão mais recente da `main`.
+- [ ] Fazer uma validação final em celular e computador: navegação e filtros, galeria e upload, login e recuperação do painel, criação e atualização de pedidos, estoque e cancelamento, e-mail, WhatsApp e páginas de política.
+- [ ] Confirmar que um pedido de teste não é confundido com venda paga: pagamento, frete, entrega e devolução são acertados diretamente com a cliente pelo WhatsApp.
+
+**Pronto para divulgação:** os dados e políticas reais estão revisados; e-mail e backup foram testados; as credenciais e acessos estão protegidos; domínio e hospedagem definitivos estão publicados; e a checagem final passou no endereço público. Até lá, use o site como demonstração e confira os pedidos no painel.
