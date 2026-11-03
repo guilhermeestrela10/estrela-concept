@@ -40,6 +40,8 @@ Os endereços acima usam um túnel temporário de demonstração. Ele depende de
 
 A interface usa o logotipo e o símbolo aprovados da Estrela Concept, com rosa antigo, preto e branco. Os arquivos oficiais usados pelo site estão em `static/brand-horizontal.png` e `static/brand-mark.png`.
 
+A foto de abertura usa a imagem enviada pela proprietária, aprimorada em alta resolução e otimizada em `static/hero-estrelaconcept.jpg`.
+
 ## Tecnologias e dados
 
 - **Interface:** HTML, CSS e JavaScript sem framework.

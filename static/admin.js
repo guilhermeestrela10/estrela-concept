@@ -3,6 +3,8 @@ const escapeText = value => String(value).replace(/[&<>"']/g, c => ({"&":"&amp;"
 const statusNames = {novo:"Novo", em_andamento:"Em andamento", concluido:"Concluído", cancelado:"Cancelado"};
 const state = { products: [], orders: [], categories: [] };
 const notice = document.querySelector("#admin-notice");
+let editingImages = [];
+let selectedImagePreviews = [];
 async function api(path, options = {}) {
   const response = await fetch(path, { ...options, headers: { "Content-Type":"application/json", ...(options.headers || {}) } });
   const body = await response.json();
@@ -82,16 +84,29 @@ function renderCategories() {
   const options = state.categories.filter(item => item.active).map(item => `<option value="${escapeText(item.name)}">${escapeText(item.name)}</option>`).join("");
   document.querySelector('#product-form [name="category"]').innerHTML = options || `<option value="">Cadastre uma categoria primeiro</option>`;
 }
+function renderProductImages() {
+  const list = document.querySelector("#product-image-list");
+  list.innerHTML = editingImages.map((url, index) => `<article class="product-image-item"><img src="${escapeText(url)}" alt="Foto ${index + 1} de ${editingImages.length}"><div><strong>${index === 0 ? "Capa" : `Foto ${index + 1}`}</strong><small>Foto atual</small></div><button type="button" data-image-up="${index}" aria-label="Mover foto ${index + 1} para cima" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" data-image-down="${index}" aria-label="Mover foto ${index + 1} para baixo" ${index === editingImages.length - 1 ? "disabled" : ""}>↓</button><button type="button" data-image-remove="${index}" aria-label="Remover foto ${index + 1}">×</button></article>`).join("") || `<p class="image-list-empty">Nenhuma foto cadastrada ainda.</p>`;
+}
+function renderSelectedImages(files) {
+  selectedImagePreviews.forEach(url => URL.revokeObjectURL(url));
+  selectedImagePreviews = files.map(file => URL.createObjectURL(file));
+  const addedUrls = [...new Set(document.querySelector('#product-form [name="images"]').value.split(/\r?\n/).map(url => url.trim()).filter(url => url && !editingImages.includes(url)))];
+  document.querySelector("#new-image-list").innerHTML = files.map((file, index) => `<article class="product-image-item"><img src="${selectedImagePreviews[index]}" alt="Prévia de ${escapeText(file.name)}"><div><strong>Foto ${editingImages.length + addedUrls.length + index + 1}</strong><small>${escapeText(file.name)}</small></div><button type="button" data-file-up="${index}" aria-label="Mover ${escapeText(file.name)} para cima" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" data-file-down="${index}" aria-label="Mover ${escapeText(file.name)} para baixo" ${index === files.length - 1 ? "disabled" : ""}>↓</button><button type="button" data-file-remove="${index}" aria-label="Remover ${escapeText(file.name)}">×</button></article>`).join("");
+}
 function editProduct(product) {
   const form = document.querySelector("#product-form"); form.reset();
   form.elements.id.value = product?.id || ""; form.elements.name.value = product?.name || "";
   form.elements.category.value = product?.category || state.categories.find(item => item.active)?.name || "";
   form.elements.price.value = product?.price ?? ""; form.elements.tagline.value = product?.tagline || "";
-  form.elements.description.value = product?.description || ""; form.elements.images.value = (product?.images || (product?.image ? [product.image] : [])).join("\n");
+  form.elements.description.value = product?.description || ""; form.elements.images.value = "";
+  editingImages = [...new Set(product?.images?.length ? product.images : product?.image ? [product.image] : [])];
+  renderProductImages(); renderSelectedImages([]);
   form.elements.variants.value = product?.variants.map(item => `${item.size} | ${item.color} | ${item.stock}`).join("\n") || "";
   form.elements.active.checked = product?.active ?? true;
   document.querySelector("#product-form-title").textContent = product ? "Editar produto" : "Novo produto";
   document.querySelector("#product-form-error").textContent = "";
+  document.querySelector("#image-upload-status").textContent = "Até 10 fotos no total, JPEG, PNG ou WebP; até 4 MB por arquivo. A ordem selecionada será mantida.";
   document.querySelector("#product-dialog").showModal();
 }
 document.querySelector("#refresh").addEventListener("click", refresh);
@@ -146,27 +161,65 @@ document.querySelector("#product-form").addEventListener("submit", async event =
       if (!size || !color || !/^\d+$/.test(stock || "")) throw new Error("Use uma variação por linha no formato: M | Preto | 5.");
       return { size, color, stock:Number(stock), active:true };
     });
-    const images = [...new Set(data.get("images").split(/\r?\n/).map(url => url.trim()).filter(Boolean))];
+    const newUrls = [...new Set(data.get("images").split(/\r?\n/).map(url => url.trim()).filter(Boolean))];
     const files = [...form.elements.imageFiles.files];
-    if (images.some(url => url.length > 2048 || !/^https:\/\//i.test(url))) throw new Error("Use URLs HTTPS válidas, uma por linha.");
+    if (newUrls.some(url => url.length > 2048 || !/^https:\/\//i.test(url))) throw new Error("Use URLs HTTPS válidas, uma por linha.");
+    const images = [...editingImages, ...newUrls.filter(url => !editingImages.includes(url))];
     if (images.length + files.length > 10) throw new Error("O produto pode ter no máximo 10 fotos.");
     if (files.some(file => file.size > 4 * 1024 * 1024)) throw new Error("Cada foto deve ter no máximo 4 MB.");
     if (files.some(file => !["image/jpeg","image/png","image/webp"].includes(file.type))) throw new Error("Use apenas arquivos JPEG, PNG ou WebP.");
     if (!images.length && !files.length) throw new Error("Informe ao menos uma URL ou escolha uma foto.");
-    for (const [index, file] of files.entries()) {
-      uploadStatus.textContent = `Enviando foto ${index + 1} de ${files.length}…`;
-      const response = await fetch("/api/admin/upload-image", { method:"POST", headers:{ "Content-Type":file.type }, body:file });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || `Não foi possível enviar a foto ${index + 1}.`);
-      images.push(result.url);
+    if (files.length) {
+      let completed = 0;
+      const uploads = await Promise.allSettled(files.map(async file => {
+        const response = await fetch("/api/admin/upload-image", { method:"POST", headers:{ "Content-Type":file.type }, body:file });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Não foi possível enviar uma das fotos.");
+        uploadStatus.textContent = `Enviando fotos (${++completed}/${files.length})…`;
+        return result.url;
+      }));
+      const failedUpload = uploads.find(result => result.status === "rejected");
+      if (failedUpload) throw failedUpload.reason;
+      images.push(...uploads.map(result => result.value));
     }
     uploadStatus.textContent = files.length ? `${files.length} foto(s) enviada(s) ao Supabase.` : "";
     const product = { id, name:data.get("name").trim(), category:data.get("category"), price:Number(data.get("price")), tagline:data.get("tagline").trim(), description:data.get("description").trim(), images, image:images[0], variants, active:form.elements.active.checked };
     await api(product.id && state.products.some(item => item.id === product.id) ? `/api/admin/products/${encodeURIComponent(product.id)}` : "/api/admin/products", { method:product.id && state.products.some(item => item.id === product.id) ? "PUT":"POST", body:JSON.stringify(product) });
-    document.querySelector("#product-dialog").close(); showMessage("Produto salvo com sucesso."); await refresh();
+    refresh(); document.querySelector("#product-dialog").close(); showMessage("Produto salvo com sucesso.");
   } catch(error) { document.querySelector("#product-form-error").textContent = error.message; }
   finally { submit.disabled = false; }
 });
+document.querySelector("#product-form").addEventListener("change", event => {
+  if (event.target.name === "imageFiles") renderSelectedImages([...event.target.files]);
+});
+document.querySelector("#product-form").addEventListener("click", event => {
+  const fileButton = event.target.closest("[data-file-up],[data-file-down],[data-file-remove]");
+  if (fileButton) {
+    const files = [...document.querySelector('#product-form [name="imageFiles"]').files];
+    const index = Number(fileButton.dataset.fileUp ?? fileButton.dataset.fileDown ?? fileButton.dataset.fileRemove);
+    if (fileButton.hasAttribute("data-file-remove")) files.splice(index, 1);
+    else {
+      const next = index + (fileButton.hasAttribute("data-file-up") ? -1 : 1);
+      [files[index], files[next]] = [files[next], files[index]];
+    }
+    const selection = new DataTransfer(); files.forEach(file => selection.items.add(file));
+    document.querySelector('#product-form [name="imageFiles"]').files = selection.files;
+    renderSelectedImages(files);
+    return;
+  }
+  const button = event.target.closest("[data-image-up],[data-image-down],[data-image-remove]");
+  if (!button) return;
+  const index = Number(button.dataset.imageUp ?? button.dataset.imageDown ?? button.dataset.imageRemove);
+  if (button.hasAttribute("data-image-remove")) editingImages.splice(index, 1);
+  else {
+    const next = index + (button.hasAttribute("data-image-up") ? -1 : 1);
+    [editingImages[index], editingImages[next]] = [editingImages[next], editingImages[index]];
+  }
+  renderProductImages();
+  renderSelectedImages([...document.querySelector('#product-form [name="imageFiles"]').files]);
+});
+document.querySelector('#product-form [name="images"]').addEventListener("change", () => renderSelectedImages([...document.querySelector('#product-form [name="imageFiles"]').files]));
+document.querySelector("#product-dialog").addEventListener("close", () => renderSelectedImages([]));
 document.querySelector("#category-form").addEventListener("submit", async event => {
   event.preventDefault();
   try { await api("/api/admin/categories", {method:"POST", body:JSON.stringify({name:event.currentTarget.elements.name.value})}); event.currentTarget.reset(); await refresh(); showMessage("Categoria cadastrada."); }

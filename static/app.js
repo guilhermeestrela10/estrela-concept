@@ -72,7 +72,7 @@ function renderProducts() {
   });
   grid.innerHTML = products.map(product => `
     <article class="product-card" data-product="${escapeHTML(product.id)}" tabindex="0" aria-label="Ver ${escapeHTML(product.name)}">
-      <div class="product-photo"><img src="${imageFor(product)}" alt="${escapeHTML(product.name)}" loading="lazy"><span class="product-badge">${escapeHTML(String(product.category).toUpperCase())}</span><button class="quick-add" data-quick-add="${escapeHTML(product.id)}" aria-label="Escolher ${escapeHTML(product.name)}">+</button></div>
+      <div class="product-photo"><img src="${imageFor(product)}" alt="${escapeHTML(product.name)}" loading="lazy" decoding="async"><span class="product-badge">${escapeHTML(String(product.category).toUpperCase())}</span><button class="quick-add" data-quick-add="${escapeHTML(product.id)}" aria-label="Escolher ${escapeHTML(product.name)}">+</button></div>
       <div class="product-info"><span class="product-category">ESTRELA CONCEPT</span><div class="product-title-line"><h3>${escapeHTML(product.name)}</h3><span class="product-price">${money(product.price)}</span></div><p class="product-tagline">${escapeHTML(product.tagline)}</p></div>
     </article>`).join("");
   document.querySelector("#result-count").textContent = `${products.length} ${products.length === 1 ? "peça encontrada" : "peças encontradas"}`;
@@ -200,7 +200,7 @@ document.querySelector("#product-detail").addEventListener("click", event => {
   if (event.target.id === "add-to-cart" && product) {
     const ok = addItem(product, state.selectedSize, state.selectedColor);
     document.querySelector("#detail-status").textContent = ok ? "Peça adicionada à sacola." : "Não há estoque suficiente para esta opção.";
-    if (ok) setTimeout(() => dialog.close(), 500);
+    if (ok) setTimeout(() => dialog.close(), 180);
   }
 });
 document.querySelector("#product-close").addEventListener("click", () => dialog.close());
