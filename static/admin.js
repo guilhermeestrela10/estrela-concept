@@ -291,24 +291,6 @@ document.querySelector("#orders-list").addEventListener("change", async event =>
   try { await api(`/api/admin/orders/${encodeURIComponent(select.dataset.orderStatus)}`, {method:"PATCH",body:JSON.stringify({status:select.value})}); await refresh(); }
   catch(error) { showError(error); await refresh(); }
 });
-document.querySelector("#test-order-email").addEventListener("click", async event => {
-  const button = event.currentTarget;
-  const status = document.querySelector("#email-test-status");
-  button.disabled = true;
-  button.textContent = "Enviando…";
-  status.textContent = "Conectando ao Gmail…";
-  status.classList.remove("error");
-  try {
-    const result = await api("/api/admin/test-email", {method:"POST", body:"{}"});
-    status.textContent = `${result.message} Se não chegar em alguns minutos, confira o spam.`;
-  } catch(error) {
-    status.textContent = error.message;
-    status.classList.add("error");
-  } finally {
-    button.disabled = false;
-    button.textContent = "Enviar e-mail de teste";
-  }
-});
 api("/api/admin/session").then(session => {
   window.recoveryAvailable = session.recoveryAvailable;
   if (recoveryAccessToken || recoveryLinkError) {

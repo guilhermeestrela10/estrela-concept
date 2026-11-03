@@ -100,7 +100,7 @@ Quando um domínio próprio for configurado, atualize também o destino usado pe
 
 ## Avisos de novos pedidos por Gmail
 
-O servidor envia os avisos usando o Gmail da loja por SMTP com SSL e senha de app. A mensagem é enviada em segundo plano depois que o pedido é salvo; uma falha no e-mail não cancela o pedido. Se o envio falhar, o Render registra um aviso nos logs. Não há repetição automática de e-mails que falharem. Na seção **Pedidos** do painel, o botão **Enviar e-mail de teste** verifica o SMTP sem criar pedido nem alterar estoque; depois, confira a caixa de entrada e o spam.
+O servidor envia avisos de pedidos reais usando o Gmail da loja por SMTP com SSL e senha de app. A mensagem é enviada em segundo plano depois que o pedido é salvo; uma falha no e-mail não cancela o pedido. Cada aviso inclui itens, total e botão para abrir o painel e falar com o cliente pelo WhatsApp; o telefone não é enviado no e-mail. Se o envio falhar, o Render registra um aviso nos logs. Não há repetição automática de e-mails que falharem.
 
 Para ativar no Render, abra as variáveis de ambiente do serviço e configure:
 
@@ -111,7 +111,7 @@ Para ativar no Render, abra as variáveis de ambiente do serviço e configure:
 
 O Google exige a verificação em duas etapas para criar uma senha de app. Gere-a na conta da loja, em **Conta Google → Segurança → Senhas de app**, e cadastre o valor diretamente como segredo no Render. Não envie essa senha por mensagem. O Google pode não exibir a opção em algumas contas. Consulte [a ajuda oficial sobre senhas de app](https://support.google.com/mail/answer/185833).
 
-Depois de salvar as variáveis, reinicie ou publique o serviço no Render e use o botão de teste no painel. A loja também mostra `estrelaconcept0@gmail.com` na área de contato. A notificação do celular depende de as notificações do Gmail estarem habilitadas no aparelho. Quando o domínio próprio for comprado, o link do painel pode ser atualizado pela variável `ADMIN_PANEL_URL`.
+Depois de salvar as variáveis, reinicie ou publique o serviço no Render. A loja também mostra `estrelaconcept0@gmail.com` na área de contato. A notificação do celular depende de as notificações do Gmail estarem habilitadas no aparelho. Quando o domínio próprio for comprado, o link do painel pode ser atualizado pela variável `ADMIN_PANEL_URL`.
 
 ## Banco de dados e imagens
 

@@ -98,9 +98,6 @@ a { color: inherit; text-decoration: none; }
 .contact-actions { display: grid; min-width: 250px; gap: 10px; }
 .contact-email { border: 1px solid #75686b; background: transparent; color: white; }
 .contact-email:hover { border-color: var(--pink); color: var(--ink); }
-.order-tools { display: flex; align-items: center; gap: 12px; }
-.button-outline { border: 1px solid var(--line); background: white; color: var(--ink); }
-.button-outline:hover { border-color: var(--pink-dark); color: var(--pink-dark); }
 .button-light { background: white; color: var(--ink); }
 .button-light:hover { background: var(--pink); }
 footer { padding: 28px 6.5% calc(28px + env(safe-area-inset-bottom)); display: flex; align-items: center; justify-content: space-between; gap: 20px; background: #f8f2f0; color: #807578; font-size: 10px; }
@@ -238,7 +235,6 @@ footer small { font-size: 9px; }
   .contact { padding-top: 40px; padding-bottom: 40px; display: block; }
   .contact-actions { margin-top: 22px; }
   .contact-actions .button { width: 100%; }
-  .order-tools { width: 100%; flex-wrap: wrap; }
   .contact h2 { font-size: clamp(31px,8vw,36px); }
   footer { align-items: flex-start; flex-direction: column; gap: 10px; padding: 20px 5% calc(20px + env(safe-area-inset-bottom)); }
   footer > span { display: block; }

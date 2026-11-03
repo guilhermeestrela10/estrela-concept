@@ -143,11 +143,13 @@ class CheckoutApiTests(unittest.TestCase):
         self.assertIn("WhatsApp", result["error"])
 
     def test_checkout_creates_order_visible_in_admin_api(self):
-        status, result = self.post_checkout([
-            {"productId": "legging-lua", "size": "P", "color": "Preto", "quantity": 1}
-        ])
+        with patch.object(server, "queue_order_notification", return_value=True) as notify:
+            status, result = self.post_checkout([
+                {"productId": "legging-lua", "size": "P", "color": "Preto", "quantity": 1}
+            ])
         self.assertEqual(status, 200)
         self.assertIn("id", result)
+        self.assertEqual(notify.call_args.args[0]["id"], result["id"])
         with urlopen(Request(f"{self.base_url}/api/admin/orders", headers={"Cookie":self.admin_cookie}), timeout=2) as response:
             orders = json.load(response)["orders"]
         self.assertEqual(orders[0]["id"], result["id"])
@@ -161,34 +163,17 @@ class CheckoutApiTests(unittest.TestCase):
                 "id": "ORDER123", "total": 90, "customerPhone": "5586999999999",
                 "items": [{"name": "Legging Lua", "size": "M", "color": "Preto", "quantity": 1}],
             })
-        body = message.get_content()
+        body = message.get_body(preferencelist=("plain",)).get_content()
         self.assertIn("https://estrela-concept.onrender.com/admin", body)
         self.assertIn("ORDER123", body)
         self.assertIn("Legging Lua", body)
         self.assertNotIn("5586999999999", body)
-
-    def test_admin_can_send_test_email_without_creating_an_order(self):
-        with patch.dict(os.environ, {
-            "GMAIL_SMTP_USER": "estrelaconcept0@gmail.com",
-            "GMAIL_APP_PASSWORD": "test-app-password",
-            "ORDER_NOTIFICATION_EMAIL": "estrelaconcept0@gmail.com",
-        }), patch.object(server, "send_order_notification", return_value=True) as send_email:
-            request = Request(f"{self.base_url}/api/admin/test-email", data=b"{}", headers={
-                "Content-Type": "application/json", "Cookie": self.admin_cookie,
-            }, method="POST")
-            with urlopen(request, timeout=2) as response:
-                result = json.load(response)
-            self.assertTrue(result["ok"])
-            self.assertEqual(send_email.call_count, 1)
-            self.assertEqual(IsolatedStoreHandler.store.orders(), [])
-
-    def test_test_email_requires_admin_authentication(self):
-        request = Request(f"{self.base_url}/api/admin/test-email", data=b"{}", headers={
-            "Content-Type": "application/json",
-        }, method="POST")
-        with self.assertRaises(HTTPError) as error:
-            urlopen(request, timeout=2)
-        self.assertEqual(error.exception.code, 401)
+        html_body = message.get_body(preferencelist=("html",)).get_content()
+        self.assertTrue(message.is_multipart())
+        self.assertIn("Novo pedido recebido", message["Subject"])
+        self.assertIn("https://estrela-concept.onrender.com/admin", html_body)
+        self.assertIn("Legging Lua", html_body)
+        self.assertNotIn("5586999999999", html_body)
 
     def test_admin_can_create_category_and_product(self):
         def post(path, payload):

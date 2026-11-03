@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import smtplib
 import os
+from html import escape
 import secrets
 import sys
 import time
@@ -33,19 +34,38 @@ def build_order_notification(order):
     message = EmailMessage()
     message["From"] = f"Estrela Concept <{sender}>"
     message["To"] = os.environ["ORDER_NOTIFICATION_EMAIL"]
-    is_test = order["id"] == "TESTE"
-    message["Subject"] = "Teste do aviso de pedidos · Estrela Concept" if is_test else f"Novo pedido recebido · #{order['id']}"
+    message["Subject"] = f"Novo pedido recebido · #{order['id']}"
     items = "\n".join(
         f"• {item['quantity']}× {item['name']} · {item['size']} · {item['color']}"
         for item in order["items"]
     )
     total = f"R$ {float(order['total']):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    intro = "Este é um e-mail de teste. Nenhum pedido foi criado.\n\n" if is_test else "A Estrela Concept recebeu um novo pedido.\n\n"
     message.set_content(
-        intro +
-        f"Pedido: #{order['id']}\nItens:\n{items}\nTotal: {total}\n\n"
-        "Para ver o telefone do cliente e conversar pelo WhatsApp, acesse o painel administrativo:\n"
+        f"A Estrela Concept recebeu um novo pedido.\n\nPedido: #{order['id']}\nItens:\n{items}\nTotal: {total}\n\n"
+        "Para ver os dados do cliente e combinar pagamento e entrega, acesse o painel administrativo:\n"
         f"{ADMIN_PANEL_URL}\n\nO painel exige login."
+    )
+    html_items = "".join(
+        "<tr>"
+        f"<td style='padding:12px 8px;border-bottom:1px solid #eee'>{escape(str(item['name']))}</td>"
+        f"<td style='padding:12px 8px;border-bottom:1px solid #eee'>{escape(str(item['size']))} · {escape(str(item['color']))}</td>"
+        f"<td style='padding:12px 8px;border-bottom:1px solid #eee;text-align:right'>{int(item['quantity'])}×</td>"
+        "</tr>"
+        for item in order["items"]
+    )
+    message.add_alternative(
+        "<!doctype html><html lang='pt-BR'><body style='margin:0;background:#f8f4f2;font-family:Arial,sans-serif;color:#211e1f'>"
+        "<div style='max-width:620px;margin:32px auto;padding:32px;background:#fff;border:1px solid #eadfe0'>"
+        "<p style='color:#a85168;letter-spacing:2px;font-size:12px;font-weight:bold'>ESTRELA CONCEPT · NOVO PEDIDO</p>"
+        f"<h1 style='font-size:26px;font-weight:500'>Pedido #{escape(str(order['id']))} recebido</h1>"
+        "<p style='color:#766d6f'>Um novo pedido foi registrado na loja. Veja os itens e o total:</p>"
+        f"<table style='width:100%;border-collapse:collapse;font-size:14px'><tbody>{html_items}</tbody></table>"
+        f"<p style='margin:24px 0;font-size:20px'><strong>Total: {escape(total)}</strong></p>"
+        f"<a href='{escape(ADMIN_PANEL_URL, quote=True)}' style='display:inline-block;padding:14px 20px;background:#211e1f;color:#fff;text-decoration:none'>"
+        "Abrir painel e chamar cliente</a>"
+        "<p style='margin-top:24px;color:#766d6f;font-size:13px'>No painel, consulte o WhatsApp do cliente para combinar pagamento, entrega e esclarecer dúvidas. O acesso exige login.</p>"
+        "<p style='margin-top:28px;color:#a85168;font-size:12px'>Seu estilo, seu brilho.<br>Estrela Concept</p>"
+        "</div></body></html>", subtype="html"
     )
     return message
 
@@ -56,6 +76,7 @@ def send_order_notification(order):
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as smtp:
             smtp.login(os.environ["GMAIL_SMTP_USER"], os.environ["GMAIL_APP_PASSWORD"].replace(" ", ""))
             smtp.send_message(message)
+        print(f"Aviso por e-mail enviado para o pedido #{order.get('id')}.")
         return True
     except Exception as error:
         print(f"Falha ao enviar aviso por e-mail do pedido #{order.get('id')}: {type(error).__name__}", file=sys.stderr)
@@ -384,18 +405,6 @@ class StoreHandler(SimpleHTTPRequestHandler):
             elif path == "/api/admin/categories":
                 category = self.admin_call("save_category", payload.get("name"))
                 self.send_json({"category": category}, 201)
-            elif path == "/api/admin/test-email":
-                if not all(os.environ.get(key) for key in ("GMAIL_SMTP_USER", "GMAIL_APP_PASSWORD", "ORDER_NOTIFICATION_EMAIL")):
-                    self.send_json({"error": "Configure o Gmail no Render antes de enviar o teste."}, 503)
-                    return
-                sent = send_order_notification({
-                    "id": "TESTE", "total": 0,
-                    "items": [{"quantity": 1, "name": "Este e-mail é apenas um teste", "size": "—", "color": "—"}],
-                })
-                if sent:
-                    self.send_json({"ok": True, "message": "E-mail de teste enviado. Confira a caixa de entrada e o spam."})
-                else:
-                    self.send_json({"error": "O Gmail recusou ou não conseguiu enviar. Confira a senha de app e os logs do Render."}, 502)
             else:
                 self.send_json({"error": "Endpoint não encontrado."}, 404)
         except OverflowError as error:
