@@ -12,11 +12,11 @@ A Estrela Concept apresenta peças de moda fitness em uma experiência responsiv
 
 ## Demonstração
 
-- **Loja:** [abrir Estrela Concept](https://laws-commissioner-hobbies-interested.trycloudflare.com)
-- **Painel administrativo:** [abrir o painel](https://laws-commissioner-hobbies-interested.trycloudflare.com/admin)
+- **Loja:** [abrir Estrela Concept](https://estrela-concept.onrender.com)
+- **Painel administrativo:** [abrir o painel](https://estrela-concept.onrender.com/admin)
 - **Repositório:** [guilhermeestrela10/estrela-concept](https://github.com/guilhermeestrela10/estrela-concept)
 
-Os endereços acima usam um túnel temporário de demonstração. Ele depende desta máquina, do servidor e da conexão com a internet; o link pode mudar ou ficar indisponível. Para uma loja pública permanente será necessário contratar e configurar hospedagem e domínio.
+O site está hospedado no plano gratuito do Render e não depende desta máquina. Esse plano pode suspender o serviço após um período sem visitas; a primeira abertura depois da suspensão pode demorar. O endereço é público e serve para demonstração; ainda falta registrar e configurar o domínio próprio.
 
 ## Recursos
 
@@ -80,7 +80,7 @@ O endpoint de status deve indicar `supabase`. Para encerrar o servidor, pression
 
 ## Hospedagem de demonstração no Render
 
-O arquivo `render.yaml` prepara o servidor Python para o Render e pede o token privado `ESTRELA_EDGE_API_TOKEN` como variável secreta durante a criação do serviço. Não coloque esse token no GitHub. O serviço pode receber um endereço `onrender.com`; para usar domínio próprio, registre o domínio e configure o DNS no painel da hospedagem.
+O arquivo `render.yaml` descreve o servidor Python para o Render e declara o token privado `ESTRELA_EDGE_API_TOKEN` como variável secreta. O serviço de demonstração já foi criado com esse token no ambiente do Render; o segredo não está no GitHub. Para usar domínio próprio, registre o domínio e configure o DNS no painel da hospedagem.
 
 O plano gratuito serve para prévia, mas pode suspender o serviço quando fica sem uso e não é recomendado pelo Render para produção. Para deixar a demonstração continuamente ativa, selecione uma instância paga no painel do Render; confirme o preço exibido antes de contratar. A loja continuará dependendo do Supabase configurado em `store.py`.
 
@@ -151,7 +151,7 @@ Os testes usam um banco SQLite temporário e cobrem pedidos, validação de esto
 ### Antes de abrir ao público
 
 - Substituir os produtos de demonstração por produtos reais, com fotos, descrições, preços, tamanhos, cores e estoque conferidos.
-- Contratar e configurar hospedagem permanente, domínio e HTTPS. O túnel atual é temporário e depende desta máquina ligada e conectada à internet.
+- Registrar domínio próprio e configurá-lo com HTTPS no Render. O endereço atual é público, mas o plano gratuito pode hibernar; para disponibilidade contínua, será necessário escolher um plano pago.
 - Revisar e publicar os dados de identificação da loja e as políticas definitivas de privacidade, entrega, troca e devolução.
 - Configurar backups e revisar as proteções do banco no ambiente de produção; tabelas e sequências estão bloqueadas para `anon` e `authenticated`, com RLS ativo e acesso apenas pelo serviço.
 - Testar cadastro e edição de produtos, estoque, pedido, login e WhatsApp no domínio final, em computadores e celulares reais.
