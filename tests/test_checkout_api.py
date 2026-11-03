@@ -57,6 +57,18 @@ class CheckoutApiTests(unittest.TestCase):
         with response:
             return response.status, json.load(response)
 
+    def post_image_upload(self, image, content_type="image/jpeg", cookie=True):
+        headers = {"Content-Type": content_type}
+        if cookie:
+            headers["Cookie"] = self.admin_cookie
+        request = Request(f"{self.base_url}/api/admin/upload-image", data=image, headers=headers, method="POST")
+        try:
+            response = urlopen(request, timeout=2)
+        except HTTPError as error:
+            return error.code, json.load(error)
+        with response:
+            return response.status, json.load(response)
+
     def test_security_headers_are_set(self):
         with urlopen(f"{self.base_url}/api/status") as response:
             headers = response.headers
@@ -65,6 +77,20 @@ class CheckoutApiTests(unittest.TestCase):
         self.assertEqual(headers["Referrer-Policy"], "strict-origin-when-cross-origin")
         self.assertIn("frame-ancestors 'none'", headers["Content-Security-Policy"])
         self.assertEqual(headers["Permissions-Policy"], "camera=(), microphone=(), geolocation=()")
+
+    def test_image_upload_requires_admin_session(self):
+        status, _ = self.post_image_upload(b"\xff\xd8\xff\xd9", cookie=False)
+        self.assertEqual(status, 401)
+
+    def test_image_upload_rejects_non_image_content(self):
+        status, result = self.post_image_upload(b"not an image")
+        self.assertEqual(status, 400)
+        self.assertIn("conteúdo", result["error"])
+
+    def test_image_upload_rejects_oversized_files(self):
+        from server import MAX_IMAGE_SIZE, validate_image
+        with self.assertRaises(OverflowError):
+            validate_image("image/jpeg", b"\xff\xd8\xff" + b"0" * MAX_IMAGE_SIZE)
 
     def test_checkout_uses_server_price_and_returns_subtotal(self):
         status, result = self.post_checkout([

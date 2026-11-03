@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import hashlib
 import hmac
+import base64
 import secrets
 import sqlite3
 import json
@@ -74,6 +75,10 @@ class SupabaseStore:
     def save_product(self, product, session_token=None):
         Store._validate_product(product)
         return self._call("save_product", product=product, sessionToken=session_token)["product"]
+    def upload_product_image(self, content_type, image, session_token=None):
+        encoded = base64.b64encode(image).decode("ascii")
+        return self._call("upload_product_image", contentType=content_type,
+            fileBase64=encoded, sessionToken=session_token)["url"]
     def set_product_active(self, product_id, active, session_token=None):
         self._call("set_product_active", id=product_id, active=bool(active), sessionToken=session_token)
     def save_category(self, name, session_token=None):

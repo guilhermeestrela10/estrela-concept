@@ -92,6 +92,11 @@ grant all on public.categories, public.products, public.product_images, public.p
 revoke all on all sequences in schema public from public, anon, authenticated;
 grant usage, select on all sequences in schema public to service_role;
 
+insert into storage.buckets(id, name, public, file_size_limit, allowed_mime_types)
+values ('product-images', 'product-images', true, 4194304, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update set public=excluded.public, file_size_limit=excluded.file_size_limit,
+  allowed_mime_types=excluded.allowed_mime_types;
+
 create policy "active categories are public" on public.categories
   for select to anon, authenticated using (active);
 create policy "active products are public" on public.products

@@ -33,7 +33,7 @@ Os endereços acima usam um túnel temporário de demonstração. Ele depende de
 
 - Login de administrador e sessão protegida.
 - Resumo de pedidos, vendas, produtos e estoque baixo.
-- Cadastro e edição de produtos, imagens por URL HTTPS, categorias, tamanhos, cores e estoque.
+- Cadastro e edição de produtos, com imagens por URL HTTPS ou envio de JPEG, PNG e WebP (até 4 MB) ao Supabase Storage; inclui categorias, tamanhos, cores e estoque.
 - Controle de visibilidade dos produtos e atualização do status dos pedidos.
 
 ### Identidade visual
@@ -46,6 +46,7 @@ A interface usa o logotipo e o símbolo aprovados da Estrela Concept, com rosa a
 - **Servidor web:** Python 3, usando a biblioteca padrão.
 - **Banco e autenticação:** Supabase Database e Supabase Auth.
 - **API de dados:** Edge Function `estrela-api`, que mantém a chave de serviço no ambiente Supabase.
+- **Imagens:** bucket público `product-images` para leitura das fotos no catálogo; upload limitado a administradores e a JPEG/PNG/WebP de até 4 MB.
 - **Testes automatizados:** `unittest` da biblioteca padrão do Python.
 
 O Supabase conectado contém categorias, produtos, imagens, variações/estoque, pedidos, itens do pedido, conta administrativa e sessões. A autorização para chamar a API do projeto usa um token privado; o Supabase guarda somente seu hash. A chave de serviço não é usada no navegador nem deve ser adicionada ao repositório.

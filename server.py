@@ -20,6 +20,22 @@ ROOT = Path(__file__).resolve().parent
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8000"))
 ADMIN_SETUP_TOKEN = os.environ.get("ESTRELA_ADMIN_SETUP_TOKEN", "")
+MAX_IMAGE_SIZE = 4 * 1024 * 1024
+IMAGE_TYPES = {"image/jpeg": b"\xff\xd8\xff", "image/png": b"\x89PNG\r\n\x1a\n", "image/webp": b"RIFF"}
+
+
+def validate_image(content_type, image):
+    if content_type not in IMAGE_TYPES:
+        raise ValueError("Envie uma foto JPEG, PNG ou WebP.")
+    if not image:
+        raise ValueError("O arquivo de imagem está vazio.")
+    if len(image) > MAX_IMAGE_SIZE:
+        raise OverflowError("A foto deve ter no máximo 4 MB.")
+    signature = IMAGE_TYPES[content_type]
+    valid = image.startswith(signature) if content_type != "image/webp" else image.startswith(b"RIFF") and image[8:12] == b"WEBP"
+    if not valid:
+        raise ValueError("O conteúdo não corresponde ao formato de imagem informado.")
+    return content_type, image
 
 
 class StoreHandler(SimpleHTTPRequestHandler):
@@ -176,9 +192,34 @@ class StoreHandler(SimpleHTTPRequestHandler):
             raise ValueError("Formato de dados inválido.")
         return payload
 
+    def read_image_upload(self):
+        content_type = self.headers.get("Content-Type", "").lower()
+        length = int(self.headers.get("Content-Length", "0"))
+        if length <= 0:
+            raise ValueError("O arquivo de imagem está vazio.")
+        if length > MAX_IMAGE_SIZE:
+            raise OverflowError("A foto deve ter no máximo 4 MB.")
+        image = self.rfile.read(length)
+        if len(image) != length:
+            raise ValueError("O envio da foto foi interrompido.")
+        return validate_image(content_type, image)
+
     def do_POST(self) -> None:
         try:
             path = urlparse(self.path).path
+            if path == "/api/admin/upload-image":
+                if not self.origin_is_same():
+                    self.send_json({"error": "Origem da solicitação não permitida."}, 403)
+                    return
+                if not self.require_admin():
+                    return
+                content_type, image = self.read_image_upload()
+                store = self.get_store()
+                if not isinstance(store, SupabaseStore):
+                    self.send_json({"error": "O envio de fotos exige o armazenamento Supabase."}, 503)
+                    return
+                self.send_json({"url": self.admin_call("upload_product_image", content_type, image)})
+                return
             payload = self.read_json()
             if not self.origin_is_same():
                 self.send_json({"error": "Origem da solicitação não permitida."}, 403)
@@ -253,6 +294,8 @@ class StoreHandler(SimpleHTTPRequestHandler):
                 self.send_json({"category": category}, 201)
             else:
                 self.send_json({"error": "Endpoint não encontrado."}, 404)
+        except OverflowError as error:
+            self.send_json({"error": str(error)}, 413)
         except (ValueError, TypeError, json.JSONDecodeError) as error:
             self.send_json({"error": str(error)}, 400)
 

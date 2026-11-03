@@ -113,6 +113,27 @@ async function products(includeInactive = false) {
   });
 }
 
+async function uploadProductImage(payload: any) {
+  const formats: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+  const contentType = payload.contentType;
+  const encoded = payload.fileBase64;
+  if (!formats[contentType] || typeof encoded !== "string" || encoded.length > 4 * Math.ceil(4 * 1024 * 1024 / 3)
+      || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) throw new ApiError("Envie uma foto JPEG, PNG ou WebP de até 4 MB.", 400);
+  let bytes: Uint8Array;
+  try { bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0)); }
+  catch { throw new ApiError("O arquivo de imagem está inválido.", 400); }
+  const valid = contentType === "image/jpeg" ? bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff
+    : contentType === "image/png" ? [0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a].every((byte,index) => bytes[index] === byte)
+    : new TextDecoder().decode(bytes.subarray(0, 4)) === "RIFF" && new TextDecoder().decode(bytes.subarray(8, 12)) === "WEBP";
+  if (!bytes.length || bytes.length > 4 * 1024 * 1024 || !valid) throw new ApiError("O conteúdo não corresponde ao formato de imagem informado.", 400);
+  const path = `products/${crypto.randomUUID()}.${formats[contentType]}`;
+  const uploaded = await fetch(`${apiUrl}/storage/v1/object/product-images/${path}`, {
+    method: "POST", headers: { apikey: serviceKey!, Authorization: `Bearer ${serviceKey}`, "Content-Type": contentType }, body: bytes,
+  });
+  if (!uploaded.ok) throw new ApiError("Não foi possível salvar a foto no Supabase Storage.", 502);
+  return { url: `${apiUrl}/storage/v1/object/public/product-images/${path}` };
+}
+
 async function categories(includeInactive = true) {
   const query = new URLSearchParams({ select: "id,name,active", order: "name" });
   if (!includeInactive) query.set("active", "eq.true");
@@ -142,7 +163,7 @@ async function handle(action: string, payload: any) {
     }
     return { ok: true };
   }
-  const privateActions = new Set(["admin_products", "admin_categories", "orders", "summary", "save_product",
+  const privateActions = new Set(["admin_products", "admin_categories", "orders", "summary", "save_product", "upload_product_image",
     "save_category", "set_product_active", "update_order_status"]);
   if (privateActions.has(action) && !await validSession(payload.sessionToken)) throw new ApiError("Entre no painel para continuar.", 401);
   if (action === "products") return { products: await products(false) };
@@ -171,6 +192,7 @@ async function handle(action: string, payload: any) {
     await db("rpc/admin_save_product", "POST", { p_product: payload.product });
     return { product: (await products(true)).find((item: any) => item.id === payload.product.id) };
   }
+  if (action === "upload_product_image") return await uploadProductImage(payload);
   if (action === "save_category") {
     const result = await db("categories?select=id,name,active", "POST", payload.category, "return=representation");
     return { category: result[0] };

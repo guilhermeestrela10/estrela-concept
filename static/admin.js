@@ -136,6 +136,9 @@ document.querySelector("#products-list").addEventListener("click", async event =
 document.querySelector("#product-form").addEventListener("submit", async event => {
   event.preventDefault();
   const form = event.currentTarget; const data = new FormData(form);
+  const submit = form.querySelector(".admin-submit"); submit.disabled = true;
+  const uploadStatus = document.querySelector("#image-upload-status");
+  document.querySelector("#product-form-error").textContent = "";
   try {
     const id = data.get("id") || data.get("name").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const variants = data.get("variants").split(/\r?\n/).filter(line => line.trim()).map(line => {
@@ -143,10 +146,22 @@ document.querySelector("#product-form").addEventListener("submit", async event =
       if (!size || !color || !/^\d+$/.test(stock || "")) throw new Error("Use uma variação por linha no formato: M | Preto | 5.");
       return { size, color, stock:Number(stock), active:true };
     });
-    const product = { id, name:data.get("name").trim(), category:data.get("category"), price:Number(data.get("price")), tagline:data.get("tagline").trim(), description:data.get("description").trim(), image:data.get("image").trim(), variants, active:form.elements.active.checked };
+    let image = data.get("image").trim();
+    const file = form.elements.imageFile.files[0];
+    if (file) {
+      if (file.size > 4 * 1024 * 1024) throw new Error("A foto deve ter no máximo 4 MB.");
+      uploadStatus.textContent = "Enviando foto…";
+      const response = await fetch("/api/admin/upload-image", { method:"POST", headers:{ "Content-Type":file.type }, body:file });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Não foi possível enviar a foto.");
+      image = result.url; uploadStatus.textContent = "Foto enviada ao Supabase.";
+    }
+    if (!image) throw new Error("Informe a URL da foto ou escolha um arquivo.");
+    const product = { id, name:data.get("name").trim(), category:data.get("category"), price:Number(data.get("price")), tagline:data.get("tagline").trim(), description:data.get("description").trim(), image, variants, active:form.elements.active.checked };
     await api(product.id && state.products.some(item => item.id === product.id) ? `/api/admin/products/${encodeURIComponent(product.id)}` : "/api/admin/products", { method:product.id && state.products.some(item => item.id === product.id) ? "PUT":"POST", body:JSON.stringify(product) });
     document.querySelector("#product-dialog").close(); showMessage("Produto salvo com sucesso."); await refresh();
   } catch(error) { document.querySelector("#product-form-error").textContent = error.message; }
+  finally { submit.disabled = false; }
 });
 document.querySelector("#category-form").addEventListener("submit", async event => {
   event.preventDefault();
