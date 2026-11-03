@@ -136,6 +136,21 @@ O catálogo existente contém dados de demonstração. O arquivo `catalog.py` of
 
 **Limite conhecido:** a proteção do Supabase contra senhas vazadas não está habilitada no plano atual. As credenciais administrativas também foram compartilhadas durante a configuração da demonstração. Reavalie a troca da senha e das chaves compartilhadas, e ative proteções disponíveis, antes de abrir a loja ao público.
 
+### Variáveis e chaves
+
+O endereço do projeto Supabase e a chave `sb_publishable_...` aparecem no código por serem identificadores e chave pública do cliente. A chave publicável pode ser distribuída, desde que o acesso às tabelas continue protegido por RLS e permissões mínimas. A auditoria atual confirmou RLS em todas as tabelas `public` e nenhum privilégio de tabela ou função concedido a `anon`, `authenticated` ou `PUBLIC`. Consulte as [regras oficiais do Supabase para chaves publicáveis e secretas](https://supabase.com/docs/guides/getting-started/api-keys).
+
+Estas configurações são privadas e devem existir apenas no serviço que as usa, nunca no Git:
+
+| Segredo | Onde configurar |
+| --- | --- |
+| `ESTRELA_EDGE_API_TOKEN` | Render; no computador local, arquivo fora do projeto em `%LOCALAPPDATA%\Estrela Concept\edge_api.key` |
+| `SUPABASE_SECRET_KEYS` ou `SUPABASE_SERVICE_ROLE_KEY` | Segredos do runtime da Edge Function no Supabase |
+| `GMAIL_APP_PASSWORD` | Variáveis privadas do Render |
+| `SUPABASE_DB_URL` e `BACKUP_ENCRYPTION_PASSPHRASE` | GitHub Actions Secrets; usados pelo backup criptografado |
+
+O `.gitignore` exclui arquivos `.env`, bancos SQLite em `data/`, logs do servidor e toda a pasta gerada `graphify-out/`. O banco local e os metadados do Graphify estão no computador, mas não fazem parte do histórico publicado.
+
 ### Políticas para revisão
 
 A rota [`/politicas`](https://estrela-concept.onrender.com/politicas) reúne rascunhos de privacidade, pagamento e entrega, trocas e devoluções. A página está marcada como rascunho e não deve ser considerada política jurídica final. Antes da abertura ao público, a responsável precisa conferir o texto e completar endereço físico, dados cadastrais, regiões de entrega, modalidades, custos, prazos, regras práticas de devolução e prazos de retenção dos dados. O texto preserva o direito legal de arrependimento nas compras online.
@@ -166,6 +181,14 @@ python -m unittest discover -s tests -v
 Os testes cobrem login e sessão, recuperação de senha no servidor, respostas de erro, validação de pedidos, estoque, upload e operações de catálogo no SQLite temporário. Eles não fazem compras reais, não enviam e-mails e não substituem a validação da implantação com o Supabase.
 
 ## Mapa dos arquivos
+
+O projeto mantém os arquivos de entrada do serviço na raiz para que o Render encontre `server.py` e o servidor encontre as páginas e a pasta `static/`. Os diretórios estão separados por função:
+
+- `static/`: scripts da loja e do painel, estilos, logos e imagens.
+- `supabase/`: esquema do banco e Edge Function.
+- `tests/`: testes automatizados e arquivos de apoio.
+- `.github/workflows/`: automações do repositório, incluindo o backup.
+- Arquivos SQLite em `data/` e `graphify-out/`: dados locais e análises geradas, ignorados pelo Git.
 
 | Caminho | Finalidade |
 | --- | --- |
