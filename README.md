@@ -46,7 +46,7 @@ O site não processa pagamentos, não calcula frete e não confirma uma venda pa
 
 ### Avisos por e-mail
 
-Quando o pedido é gravado, o servidor tenta enviar uma notificação ao Gmail da loja por SMTP seguro. A mensagem mostra os itens, o total e um botão para abrir o painel. Os dados de contato da cliente ficam somente no painel, que exige login. Uma falha no e-mail não cancela o pedido; no momento, avisos com falha não são reenviados automaticamente.
+Quando o pedido é gravado, o servidor tenta enviar uma notificação para o e-mail da loja pela API HTTPS do Resend. A mensagem mostra os itens, o total e um botão para abrir o painel. O telefone da cliente fica somente no painel, que exige login. Uma falha no e-mail não cancela o pedido; no momento, avisos com falha não são reenviados automaticamente. O pedido continua disponível no painel.
 
 ## Como funciona
 
@@ -109,13 +109,15 @@ O serviço Render utiliza as seguintes variáveis de ambiente. Cadastre os valor
 | Variável | Uso |
 | --- | --- |
 | `ESTRELA_EDGE_API_TOKEN` | Segredo para o servidor chamar a Edge Function |
-| `GMAIL_SMTP_USER` | Conta Gmail que envia os avisos |
-| `GMAIL_APP_PASSWORD` | Senha de app do Gmail, armazenada como segredo |
+| `RESEND_API_KEY` | Chave secreta usada para enviar notificações pelo Resend |
+| `RESEND_FROM_EMAIL` | Remetente autorizado no Resend; durante testes, o padrão é `Estrela Concept <onboarding@resend.dev>` |
 | `ORDER_NOTIFICATION_EMAIL` | Endereço que recebe os avisos de novos pedidos |
 | `ADMIN_PANEL_URL` | Link do painel incluído no e-mail; padrão atual: `https://estrela-concept.onrender.com/admin` |
 | `HOST` / `PORT` | Endereço e porta do servidor; o Render define a porta |
 
-Para enviar e-mails, é necessária uma senha de app do Google, não a senha normal da conta. A conta precisa ter a verificação em duas etapas habilitada. Consulte a [ajuda oficial do Google sobre senhas de app](https://support.google.com/mail/answer/185833). Ative também as notificações do Gmail no celular da loja.
+No Render, use o Resend pela API HTTPS. O plano gratuito do Render bloqueia conexões SMTP de saída nas portas 25, 465 e 587, usadas pelo Gmail ([limitações oficiais](https://render.com/docs/free)). Crie uma chave no Resend e configure-a diretamente no painel do Render; nunca a grave no Git. Para usar um endereço próprio como remetente, verifique o domínio no Resend e cadastre o endereço em `RESEND_FROM_EMAIL`. O remetente de teste `onboarding@resend.dev` serve apenas para os testes permitidos pelo Resend. Ative também as notificações do Gmail no celular da loja.
+
+Fora do Render, o desenvolvimento local ainda pode usar `GMAIL_SMTP_USER` e `GMAIL_APP_PASSWORD` como alternativa. No Render, essas variáveis não substituem a chave do Resend.
 
 ## Banco e arquivos do Supabase
 
@@ -146,7 +148,8 @@ Estas configurações são privadas e devem existir apenas no serviço que as us
 | --- | --- |
 | `ESTRELA_EDGE_API_TOKEN` | Render; no computador local, arquivo fora do projeto em `%LOCALAPPDATA%\Estrela Concept\edge_api.key` |
 | `SUPABASE_SECRET_KEYS` ou `SUPABASE_SERVICE_ROLE_KEY` | Segredos do runtime da Edge Function no Supabase |
-| `GMAIL_APP_PASSWORD` | Variáveis privadas do Render |
+| `RESEND_API_KEY` | Variáveis privadas do Render |
+| `GMAIL_APP_PASSWORD` | Apenas no ambiente local, se usar o SMTP de desenvolvimento |
 | `SUPABASE_DB_URL` e `BACKUP_ENCRYPTION_PASSPHRASE` | GitHub Actions Secrets; usados pelo backup criptografado |
 
 O `.gitignore` exclui arquivos `.env`, bancos SQLite em `data/`, logs do servidor e toda a pasta gerada `graphify-out/`. O banco local e os metadados do Graphify estão no computador, mas não fazem parte do histórico publicado.
@@ -178,7 +181,7 @@ Na pasta do projeto, execute:
 python -m unittest discover -s tests -v
 ```
 
-Os testes cobrem login e sessão, recuperação de senha no servidor, respostas de erro, validação de pedidos, estoque, upload e operações de catálogo no SQLite temporário. Eles não fazem compras reais, não enviam e-mails e não substituem a validação da implantação com o Supabase.
+Os testes cobrem login e sessão, recuperação de senha no servidor, respostas de erro, validação de pedidos, estoque, upload, operações de catálogo no SQLite temporário e a montagem do envio pelo Resend. Eles não fazem compras reais, não enviam e-mails e não substituem a validação da implantação com o Supabase.
 
 ## Mapa dos arquivos
 

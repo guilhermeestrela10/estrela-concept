@@ -6,6 +6,8 @@ import json
 import smtplib
 import os
 import logging
+import urllib.error
+import urllib.request
 from html import escape
 import secrets
 import sys
@@ -31,7 +33,7 @@ ADMIN_PANEL_URL = os.environ.get("ADMIN_PANEL_URL", "https://estrela-concept.onr
 
 
 def build_order_notification(order):
-    sender = os.environ["GMAIL_SMTP_USER"]
+    sender = os.environ.get("GMAIL_SMTP_USER") or os.environ["ORDER_NOTIFICATION_EMAIL"]
     message = EmailMessage()
     message["From"] = f"Estrela Concept <{sender}>"
     message["To"] = os.environ["ORDER_NOTIFICATION_EMAIL"]
@@ -74,18 +76,50 @@ def build_order_notification(order):
 def send_order_notification(order):
     try:
         message = build_order_notification(order)
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as smtp:
-            smtp.login(os.environ["GMAIL_SMTP_USER"], os.environ["GMAIL_APP_PASSWORD"].replace(" ", ""))
-            smtp.send_message(message)
+        api_key = os.environ.get("RESEND_API_KEY")
+        if api_key:
+            plain = message.get_body(preferencelist=("plain",)).get_content()
+            html = message.get_body(preferencelist=("html",)).get_content()
+            payload = json.dumps({
+                "from": os.environ.get("RESEND_FROM_EMAIL", "Estrela Concept <onboarding@resend.dev>"),
+                "to": [os.environ["ORDER_NOTIFICATION_EMAIL"]],
+                "subject": str(message["Subject"]),
+                "text": plain,
+                "html": html,
+            }).encode("utf-8")
+            request = urllib.request.Request("https://api.resend.com/emails", data=payload, method="POST", headers={
+                "Authorization": f"Bearer {api_key}", "Content-Type": "application/json",
+                "Idempotency-Key": str(order["id"]),
+            })
+            with urllib.request.urlopen(request, timeout=15) as response:
+                response.read()
+        else:
+            if os.environ.get("RENDER"):
+                raise RuntimeError("Resend não está configurado; o Render Free bloqueia SMTP.")
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as smtp:
+                smtp.login(os.environ["GMAIL_SMTP_USER"], os.environ["GMAIL_APP_PASSWORD"].replace(" ", ""))
+                smtp.send_message(message)
         print(f"Aviso por e-mail enviado para o pedido #{order.get('id')}.")
         return True
+    except urllib.error.HTTPError as error:
+        print(f"Falha ao enviar aviso por e-mail do pedido #{order.get('id')}: Resend HTTP {error.code}", file=sys.stderr)
+        return False
     except Exception as error:
         print(f"Falha ao enviar aviso por e-mail do pedido #{order.get('id')}: {type(error).__name__}", file=sys.stderr)
         return False
 
 
+def email_notifications_configured():
+    if not os.environ.get("ORDER_NOTIFICATION_EMAIL"):
+        return False
+    if os.environ.get("RESEND_API_KEY"):
+        return True
+    return not os.environ.get("RENDER") and all(os.environ.get(key) for key in ("GMAIL_SMTP_USER", "GMAIL_APP_PASSWORD"))
+
+
 def queue_order_notification(order):
-    if not all(os.environ.get(key) for key in ("GMAIL_SMTP_USER", "GMAIL_APP_PASSWORD", "ORDER_NOTIFICATION_EMAIL")):
+    if not email_notifications_configured():
+        print("Aviso por e-mail não configurado; o pedido segue registrado no painel.", file=sys.stderr)
         return False
     try:
         threading.Thread(target=send_order_notification, args=(order,), daemon=True, name="order-email").start()
@@ -194,7 +228,8 @@ class StoreHandler(SimpleHTTPRequestHandler):
             return False
 
     def client_ip(self):
-        return self.headers.get("CF-Connecting-IP") or self.client_address[0]
+        forwarded = self.headers.get("X-Forwarded-For", "").split(",", 1)[0].strip()
+        return forwarded or self.headers.get("CF-Connecting-IP") or self.client_address[0]
 
     def attempts_for(self, table):
         # IPs forjados não podem inflar a memória: passando do teto, recomeça do zero.
@@ -513,7 +548,8 @@ if __name__ == "__main__":
         raise
 
     print(f"Estrela Concept disponível em http://{HOST}:{PORT}")
-    print("Avisos de pedidos por e-mail: " + ("ativos" if all(os.environ.get(key) for key in ("GMAIL_SMTP_USER", "GMAIL_APP_PASSWORD", "ORDER_NOTIFICATION_EMAIL")) else "configure GMAIL_SMTP_USER, GMAIL_APP_PASSWORD e ORDER_NOTIFICATION_EMAIL"))
+    email_status = "Resend" if os.environ.get("RESEND_API_KEY") else "Gmail SMTP local"
+    print("Avisos de pedidos por e-mail: " + (f"ativos ({email_status})" if email_notifications_configured() else "configure RESEND_API_KEY e ORDER_NOTIFICATION_EMAIL no Render"))
     try:
         server.serve_forever()
     except KeyboardInterrupt:
