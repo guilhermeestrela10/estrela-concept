@@ -136,6 +136,25 @@ O catálogo existente contém dados de demonstração. O arquivo `catalog.py` of
 
 **Limite conhecido:** a proteção do Supabase contra senhas vazadas não está habilitada no plano atual. As credenciais administrativas também foram compartilhadas durante a configuração da demonstração. Reavalie a troca da senha e das chaves compartilhadas, e ative proteções disponíveis, antes de abrir a loja ao público.
 
+### Políticas para revisão
+
+A rota [`/politicas`](https://estrela-concept.onrender.com/politicas) reúne rascunhos de privacidade, pagamento e entrega, trocas e devoluções. A página está marcada como rascunho e não deve ser considerada política jurídica final. Antes da abertura ao público, a responsável precisa conferir o texto e completar endereço físico, dados cadastrais, regiões de entrega, modalidades, custos, prazos, regras práticas de devolução e prazos de retenção dos dados. O texto preserva o direito legal de arrependimento nas compras online.
+
+### Backup automático do banco
+
+O projeto Supabase está no plano Free, que não oferece backups automáticos diários para download. O repositório inclui o fluxo [`supabase-backup.yml`](.github/workflows/supabase-backup.yml), que pode gerar uma cópia semanal ou manual do banco e publicar somente um arquivo criptografado com GPG. Como o repositório é público, qualquer pessoa pode baixar o artefato, mas não consegue ler seu conteúdo sem a senha. Os artefatos ficam no GitHub por 30 dias.
+
+Para ativar, abra **GitHub → Settings → Secrets and variables → Actions → New repository secret** e cadastre:
+
+| Nome do segredo | Valor |
+| --- | --- |
+| `SUPABASE_DB_URL` | String de conexão do banco obtida em Supabase → Connect; prefira a string do Session Pooler. Não a publique nem a envie por mensagem. |
+| `BACKUP_ENCRYPTION_PASSPHRASE` | Senha aleatória exclusiva com pelo menos 24 caracteres. Guarde-a fora do GitHub: sem ela, não será possível abrir os backups. |
+
+Depois, acesse **Actions → Backup criptografado do Supabase → Run workflow** para fazer a primeira execução. O agendamento semanal começa após os dois segredos serem cadastrados. Para restaurar, baixe o artefato e use `gpg --decrypt estrela-supabase-backup.tar.gz.gpg > estrela-supabase-backup.tar.gz`; extraia o arquivo e use os SQL em um projeto de recuperação depois de conferir o destino. Faça um teste de restauração antes de depender desse processo em produção.
+
+**Limite deste backup:** o Supabase CLI exclui os esquemas gerenciados `auth` e `storage`; imagens guardadas no Supabase Storage não entram nesta cópia. Mantenha os arquivos originais das fotos fora do Supabase até existir uma rotina específica de backup do Storage. Consulte a [documentação oficial do Supabase](https://supabase.com/docs/guides/platform/backups).
+
 ## Testes
 
 Na pasta do projeto, execute:
@@ -151,6 +170,7 @@ Os testes cobrem login e sessão, recuperação de senha no servidor, respostas 
 | Caminho | Finalidade |
 | --- | --- |
 | `index.html` | Página principal da loja |
+| `politicas.html` | Rascunhos de privacidade e políticas comerciais |
 | `admin.html` | Interface administrativa restrita |
 | `server.py` | Servidor web, segurança HTTP, rotas e avisos por e-mail |
 | `store.py` | Comunicação com o Supabase e armazenamento SQLite para testes |
@@ -163,6 +183,7 @@ Os testes cobrem login e sessão, recuperação de senha no servidor, respostas 
 | `supabase/functions/estrela-api/index.ts` | API protegida no Supabase |
 | `render.yaml` | Configuração do serviço Render |
 | `tests/` | Testes automatizados |
+| `.github/workflows/supabase-backup.yml` | Fluxo semanal e manual para backup criptografado do banco |
 
 ## Publicação e domínio
 
@@ -176,9 +197,9 @@ A migração será planejada quando a proprietária escolher e contratar um plan
 
 1. Cadastrar produtos verdadeiros: fotos, descrições, preços, tamanhos, cores e estoque.
 2. Escolher e contratar domínio e hospedagem permanentes.
-3. Publicar informações legais e políticas definitivas de privacidade, entrega, troca e devolução.
-4. Definir uma rotina de backup do Supabase; os recursos disponíveis variam conforme o plano. Consulte a [documentação oficial de backups](https://supabase.com/docs/guides/platform/backups).
-5. Revisar segredos e acesso administrativo e configurar proteções adequadas ao plano escolhido.
+3. Revisar e finalizar as políticas em `/politicas`, incluindo os dados da empresa e as condições comerciais que ainda faltam.
+4. Cadastrar os dois segredos do GitHub Actions e confirmar uma execução de backup bem-sucedida; planejar cópia independente das imagens no Supabase Storage.
+5. Trocar a senha de administrador e as chaves que foram compartilhadas, habilitar a proteção contra senhas vazadas quando o plano permitir e revisar MFA/contas com acesso ao Supabase.
 6. Conferir a lista de URLs permitidas para recuperação de senha no Supabase e validar o envio de e-mails.
 7. Fazer uma revisão final no domínio definitivo em computador e celular, sem criar pedidos reais desnecessários.
 

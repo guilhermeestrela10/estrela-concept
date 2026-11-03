@@ -134,6 +134,8 @@ class StoreHandler(SimpleHTTPRequestHandler):
         self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
+        if self.headers.get("X-Forwarded-Proto") == "https":
+            self.send_header("Strict-Transport-Security", "max-age=31536000")
         super().end_headers()
 
     def send_response(self, code, message=None):
@@ -260,6 +262,8 @@ class StoreHandler(SimpleHTTPRequestHandler):
             self.path = "/admin.html"
             super().do_GET()
             return
+        if path == "/politicas":
+            self.path = "/politicas.html"
         if path.startswith("/api/"):
             self.send_json({"error": "Endpoint não encontrado."}, 404)
             return
@@ -267,7 +271,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
             self.path = "/index.html"
         static_path = unquote(urlparse(self.path).path)
         if "\\" in static_path or ".." in Path(static_path).parts or not (
-            static_path in {"/index.html", "/admin.html", "/favicon.ico"}
+            static_path in {"/index.html", "/admin.html", "/politicas.html", "/favicon.ico"}
             or static_path.startswith("/static/")
         ):
             self.send_error(404)

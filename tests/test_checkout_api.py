@@ -209,6 +209,18 @@ class CheckoutApiTests(unittest.TestCase):
         self.assertEqual(summary["products"], 5)
         self.assertEqual(summary["orders"], 0)
 
+    def test_policies_page_is_served_and_has_review_notice(self):
+        with urlopen(f"{self.base_url}/politicas", timeout=2) as response:
+            page = response.read().decode("utf-8")
+        self.assertEqual(response.status, 200)
+        self.assertIn("Rascunho para revisão", page)
+        self.assertIn("direito de arrependimento", page)
+
+    def test_https_response_includes_hsts(self):
+        request = Request(f"{self.base_url}/", headers={"X-Forwarded-Proto": "https"})
+        with urlopen(request, timeout=2) as response:
+            self.assertEqual(response.headers.get("Strict-Transport-Security"), "max-age=31536000")
+
     def admin_request(self, path, method="GET", payload=None, cookie=None, origin=None, client_ip=None):
         data = json.dumps(payload).encode() if payload is not None else None
         request = Request(f"{self.base_url}{path}", data=data, method=method,
