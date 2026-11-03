@@ -97,20 +97,8 @@ values ('product-images', 'product-images', true, 4194304, array['image/jpeg', '
 on conflict (id) do update set public=excluded.public, file_size_limit=excluded.file_size_limit,
   allowed_mime_types=excluded.allowed_mime_types;
 
-create policy "active categories are public" on public.categories
-  for select to anon, authenticated using (active);
-create policy "active products are public" on public.products
-  for select to anon, authenticated using (active);
-create policy "images of active products are public" on public.product_images
-  for select to anon, authenticated using (
-    exists (select 1 from public.products p where p.id = product_id and p.active)
-  );
-create policy "available variants of active products are public" on public.product_variants
-  for select to anon, authenticated using (
-    active and stock > 0 and exists (
-      select 1 from public.products p where p.id = product_id and p.active
-    )
-  );
+-- Sem policies para anon/authenticated de propósito: os grants foram revogados acima e toda
+-- leitura passa pela Edge Function (service_role). Policies aqui seriam código morto.
 
 create function public.checkout_create_order(
   p_customer_name text,

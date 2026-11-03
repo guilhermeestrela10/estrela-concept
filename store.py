@@ -55,7 +55,7 @@ class SupabaseStore:
         data = json.dumps({"action": action, **payload}, ensure_ascii=False).encode()
         token_hash = hashlib.sha256(self.token.encode()).hexdigest()
         request = urllib.request.Request(self.url + "/functions/v1/estrela-api", data=data, method="POST",
-            headers={"apikey": self.publishable_key, "x-estrela-token-sha256": token_hash,
+            headers={"apikey": self.publishable_key, "x-estrela-token": self.token, "x-estrela-token-sha256": token_hash,
                 "Content-Type": "application/json"})
         try:
             with urllib.request.urlopen(request, timeout=15) as response:

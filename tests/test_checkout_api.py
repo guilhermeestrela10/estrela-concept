@@ -55,6 +55,9 @@ class CheckoutApiTests(unittest.TestCase):
         IsolatedStoreHandler.sessions = {"api-test": {"expires": time.monotonic() + 3600}}
         IsolatedStoreHandler.login_attempts.clear()
         IsolatedStoreHandler.recovery_attempts.clear()
+        IsolatedStoreHandler.checkout_attempts.clear()
+        IsolatedStoreHandler.checkout_global.clear()
+        IsolatedStoreHandler.login_failures.clear()
         self.admin_cookie = "estrela_admin=api-test"
 
     def post_checkout(self, items, customer=None):
@@ -87,11 +90,21 @@ class CheckoutApiTests(unittest.TestCase):
     def test_security_headers_are_set(self):
         with urlopen(f"{self.base_url}/api/status") as response:
             headers = response.headers
+        self.assertEqual(headers["Cache-Control"], "no-store")
         self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
         self.assertEqual(headers["X-Frame-Options"], "DENY")
         self.assertEqual(headers["Referrer-Policy"], "strict-origin-when-cross-origin")
         self.assertIn("frame-ancestors 'none'", headers["Content-Security-Policy"])
         self.assertEqual(headers["Permissions-Policy"], "camera=(), microphone=(), geolocation=()")
+
+    def test_static_assets_can_be_cached_briefly(self):
+        with urlopen(f"{self.base_url}/static/styles.css") as response:
+            self.assertEqual(response.headers["Cache-Control"], "public, max-age=300")
+
+    def test_admin_forms_do_not_prefill_the_username(self):
+        with urlopen(f"{self.base_url}/admin") as response:
+            page = response.read().decode("utf-8")
+        self.assertNotIn('value="login-admin"', page)
 
     def test_unexpected_api_errors_return_a_generic_response(self):
         with patch.object(IsolatedStoreHandler.store, "products", side_effect=RuntimeError("private backend detail")):
@@ -122,6 +135,10 @@ class CheckoutApiTests(unittest.TestCase):
         ])
         self.assertEqual(status, 200)
         self.assertEqual(result["total"], 279.8)
+
+    def test_checkout_is_rate_limited_per_ip(self):
+        statuses = [self.post_checkout([])[0] for _ in range(25)]
+        self.assertEqual(statuses.count(429), 5)
 
     def test_checkout_rejects_quantity_above_stock(self):
         status, result = self.post_checkout([
