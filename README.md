@@ -1,162 +1,147 @@
 # Estrela Concept
 
-**Seu estilo, seu brilho.** Uma loja virtual de moda fitness com catálogo, sacola, pedidos pelo WhatsApp e painel administrativo. O projeto está em fase de demonstração: há sete produtos cadastrados no Supabase, dos quais cinco estão visíveis; todos são exemplos e devem ser conferidos e substituídos antes da abertura ao público.
+**Seu estilo, seu brilho.** A Estrela Concept é uma loja virtual de moda fitness. O site apresenta produtos, permite montar uma sacola e registra pedidos para a equipe continuar o atendimento pelo WhatsApp.
 
-<p align="center">
-  <img src="static/brand-horizontal.png" alt="Estrela Concept" width="300">
-</p>
+> **Demonstração:** os produtos e estoques atuais são exemplos. O site está publicado, mas ainda não está pronto para receber vendas reais.
 
-## Sobre a loja
+## Acessos
 
-A Estrela Concept apresenta peças de moda fitness em uma experiência responsiva, pensada para celular e computador. O atendimento é feito pelo WhatsApp da loja: **+55 86 99926-9836**. Livya De Araújo Macedo Estrela combina com o cliente pagamento, frete, entrega, trocas, devoluções e dúvidas sobre os produtos.
-
-## Demonstração
-
-- **Loja:** [abrir Estrela Concept](https://estrela-concept.onrender.com)
+- **Loja:** [estrela-concept.onrender.com](https://estrela-concept.onrender.com/)
 - **Painel administrativo:** [abrir o painel](https://estrela-concept.onrender.com/admin)
-- **Repositório:** [guilhermeestrela10/estrela-concept](https://github.com/guilhermeestrela10/estrela-concept)
+- **Código no GitHub:** [guilhermeestrela10/estrela-concept](https://github.com/guilhermeestrela10/estrela-concept)
 
-O site está hospedado no plano gratuito do Render e não depende desta máquina. Esse plano pode suspender o serviço após um período sem visitas; a primeira abertura depois da suspensão pode demorar. O endereço é público e serve para demonstração; ainda falta registrar e configurar o domínio próprio.
+O endereço do painel também pode ser encontrado no rodapé da loja. A página de administração exige login.
 
-## Recursos
+## O que o site faz
 
-### Loja
+### Para quem visita a loja
 
-- Busca e filtros por categoria, tamanho e faixa de preço.
-- Página de detalhes com galeria de até 10 fotos, descrição e variações disponíveis.
-- Sacola com seleção de tamanho/cor e quantidade.
-- Validação de estoque e registro do pedido no Supabase.
-- Atalho para continuar o atendimento do pedido pelo WhatsApp.
-- Layout adaptável a telas pequenas, com navegação por teclado e suporte a preferência por movimento reduzido.
+- Pesquisa produtos e filtra por categoria, tamanho e preço.
+- Consulta fotos, descrição, tamanhos, cores e disponibilidade.
+- Adiciona itens à sacola e informa nome e WhatsApp para enviar um pedido.
+- O site confere o estoque e registra o pedido no banco de dados.
+- O cliente pode abrir o WhatsApp para combinar pagamento, frete, entrega, trocas, devoluções ou tirar dúvidas.
 
-### Painel administrativo
+O site **não cobra pagamentos** e não calcula frete. Essas combinações são feitas diretamente com a loja pelo WhatsApp **+55 86 99926-9836**.
 
-- Login de administrador e sessão protegida.
-- Recuperação de senha pelo e-mail cadastrado no Supabase Auth; a redefinição encerra as sessões administrativas existentes.
-- Resumo de pedidos, vendas, produtos e estoque baixo.
-- Cadastro e edição de produtos, com até 10 imagens por URL HTTPS ou envio de JPEG, PNG e WebP (até 4 MB por arquivo) ao Supabase Storage; inclui categorias, tamanhos, cores e estoque.
-- Controle de visibilidade dos produtos e atualização do status dos pedidos.
+### Para a administração
 
-### Identidade visual
+- Consulta pedidos e acompanha seus status.
+- Cadastra e edita produtos, categorias, preços e estoque.
+- Adiciona até 10 fotos por produto. As imagens podem vir de endereços HTTPS ou do dispositivo, em JPEG, PNG ou WebP, com até 4 MB por arquivo.
+- Controla se cada produto aparece na loja.
+- Usa o link **Esqueci minha senha** para receber um link de recuperação no e-mail cadastrado no Supabase.
 
-A interface usa o logotipo e o símbolo aprovados da Estrela Concept, com rosa antigo, preto e branco. Os arquivos oficiais usados pelo site estão em `static/brand-horizontal.png` e `static/brand-mark.png`.
+## Situação atual
 
-A foto de abertura usa a imagem enviada pela proprietária, aprimorada em alta resolução e otimizada em `static/hero-estrelaconcept.jpg`.
+O projeto está publicado para demonstração no Render e usa o Supabase para os dados, as imagens e a autenticação. Na revisão de **3 de novembro de 2026**, o banco tinha sete produtos de exemplo, cinco visíveis. Essa quantidade pode mudar quando o catálogo for editado.
 
-## Tecnologias e dados
+O plano gratuito do Render pode suspender o serviço depois de um período sem visitas; a primeira abertura após a pausa pode demorar. O site não depende de este computador ficar ligado. O projeto Supabase também está no plano gratuito e pode pausar projetos sem atividade prolongada.
 
-- **Interface:** HTML, CSS e JavaScript sem framework.
-- **Servidor web:** Python 3, usando a biblioteca padrão.
-- **Banco e autenticação:** Supabase Database e Supabase Auth.
-- **API de dados:** Edge Function `estrela-api`, que mantém a chave de serviço no ambiente Supabase.
-- **Imagens:** bucket público `product-images` para leitura das fotos no catálogo; upload limitado a administradores e a JPEG/PNG/WebP de até 4 MB.
-- **Testes automatizados:** `unittest` da biblioteca padrão do Python.
+## Como os dados são protegidos
 
-O Supabase conectado contém categorias, produtos, imagens, variações/estoque, pedidos, itens do pedido, conta administrativa e sessões. A autorização para chamar a API do projeto usa um token privado; o Supabase guarda somente seu hash. A chave de serviço não é usada no navegador nem deve ser adicionada ao repositório.
+- O navegador conversa com o servidor Python. A chave de serviço do Supabase fica na Edge Function e não é usada no navegador.
+- O servidor chama a função estrela-api com um token privado. O banco armazena o hash desse token.
+- As tabelas têm RLS habilitado, e o acesso de escrita passa pelas rotas protegidas do servidor.
+- A sacola fica no navegador; pedidos, produtos, estoque e dados administrativos ficam no Supabase.
+- O painel usa sessão protegida por cookie, com validade de até oito horas. Trocar a senha pela recuperação encerra as sessões administrativas existentes.
+- O upload de imagens exige acesso administrativo e valida o tipo e o conteúdo do arquivo.
 
-## Executar neste computador
+**Limite conhecido:** a proteção do Supabase contra senhas vazadas está desativada no plano atual. A proprietária decidiu manter as credenciais administrativas atuais durante a demonstração. Reavalie essas decisões antes da abertura ao público.
 
-### Requisitos
+## Tecnologias
 
-- Windows, macOS ou Linux.
-- Python 3.10 ou superior.
-- Acesso à internet para conectar ao Supabase e carregar fontes e imagens externas.
-- Token privado da API do projeto configurado localmente. No computador usado para a demonstração, ele já é lido de `%LOCALAPPDATA%\Estrela Concept\edge_api.key`.
+- **Loja e painel:** HTML, CSS e JavaScript, sem framework.
+- **Servidor:** Python 3.10 ou superior e biblioteca padrão do Python.
+- **Banco, login e arquivos:** Supabase Database, Supabase Auth e Supabase Storage.
+- **Hospedagem da demonstração:** Render.
+- **Testes:** unittest, com SQLite temporário para simular o armazenamento local.
 
-### Iniciar
+Não há dependências Python externas para instalar.
 
-No terminal, abra a pasta do projeto e execute:
+## Executar no computador
 
-```powershell
-python server.py
-```
+### 1. Preparar o token privado
 
-Depois, acesse:
+O servidor local precisa de ESTRELA_EDGE_API_TOKEN para acessar a Edge Function. No computador usado para a demonstração, o token pode ser lido de:
+
+    %LOCALAPPDATA%\Estrela Concept\edge_api.key
+
+Se ainda não tiver esse arquivo, configure a variável de ambiente no PowerShell. Use o valor do token guardado em local seguro; não o coloque no código, no README, em capturas de tela ou no GitHub.
+
+    $env:ESTRELA_EDGE_API_TOKEN = "SEU_TOKEN_PRIVADO"
+
+### 2. Iniciar o servidor
+
+Abra o PowerShell na pasta do projeto e execute:
+
+    python server.py
+
+Abra estes endereços no navegador:
 
 - Loja: <http://127.0.0.1:8000>
 - Painel: <http://127.0.0.1:8000/admin>
-- Verificação da conexão: <http://127.0.0.1:8000/api/status>
+- Estado da conexão: <http://127.0.0.1:8000/api/status>
 
-O endpoint de status deve indicar `supabase`. Para encerrar o servidor, pressione `Ctrl+C` no terminal. As configurações `HOST` e `PORT` podem ser substituídas por variáveis de ambiente. O padrão é `127.0.0.1:8000`.
+Para encerrar, volte ao terminal e pressione Ctrl+C. O servidor usa 127.0.0.1:8000 por padrão; HOST e PORT podem ser definidos por variáveis de ambiente.
 
-## Hospedagem de demonstração no Render
+O servidor local conectado ao Supabase não troca automaticamente para SQLite se a conexão falhar: as rotas de dados retornam erro para evitar gravar dados no lugar errado. SQLite é usado nos testes.
 
-O arquivo `render.yaml` descreve o servidor Python para o Render e declara o token privado `ESTRELA_EDGE_API_TOKEN` como variável secreta. O serviço de demonstração já foi criado com esse token no ambiente do Render; o segredo não está no GitHub. Para usar domínio próprio, registre o domínio e configure o DNS no painel da hospedagem.
+## Recuperação da senha do painel
 
-O plano gratuito serve para prévia, mas pode suspender o serviço quando fica sem uso e não é recomendado pelo Render para produção. Para deixar a demonstração continuamente ativa, selecione uma instância paga no painel do Render; confirme o preço exibido antes de contratar. A loja continuará dependendo do Supabase configurado em `store.py`.
+O painel solicita a recuperação pelo nome de usuário e não informa se um usuário existe. O link é enviado pelo Supabase Auth ao e-mail cadastrado. A nova senha precisa ter pelo menos 12 caracteres; depois de alterá-la, entre novamente no painel.
 
-### Token privado da API
+Para que o link de recuperação abra corretamente, nas configurações **Authentication → URL Configuration** do Supabase, inclua este endereço na lista de redirecionamentos permitidos:
 
-O servidor precisa de `ESTRELA_EDGE_API_TOKEN` para se comunicar com a Edge Function. No computador de demonstração, o valor é lido do arquivo privado indicado acima. Também é possível fornecê-lo no ambiente antes de iniciar o servidor:
+    https://estrela-concept.onrender.com/admin
 
-```powershell
-$env:ESTRELA_EDGE_API_TOKEN = "COLOQUE_O_TOKEN_PRIVADO_LOCALMENTE"
-python server.py
-```
+Quando um domínio próprio for configurado, atualize também o destino usado pela função e a lista permitida no Supabase. A recuperação por e-mail não foi testada de ponta a ponta, pois isso enviaria uma mensagem real.
 
-O texto acima é apenas um exemplo de configuração. Não coloque o token real neste README, no código, em capturas de tela ou em commits. Se o token não estiver configurado, as rotas de dados falham de forma segura em vez de gravarem pedidos em um banco local por engano.
+## Banco de dados e imagens
 
-## Primeiro acesso ao painel
+O arquivo supabase/schema.sql documenta as tabelas, validações, permissões e funções usadas pelo projeto. A aplicação publicada usa o projeto Supabase já conectado; não é necessário executar esse arquivo novamente para testar o site.
 
-Abra `/admin` e entre com a conta administrativa configurada para o projeto. A senha não fica armazenada neste repositório. Se o Supabase ainda não tiver uma conta administrativa, a configuração inicial só pode ser feita uma vez e exige uma solicitação local ou o token de configuração definido no servidor. Não tente recriar uma conta já configurada.
+O catálogo de demonstração fica no Supabase. As imagens enviadas pelo painel são salvas no bucket product-images; a vitrine lê as imagens desse bucket. O arquivo catalog.py fornece produtos de exemplo para o armazenamento SQLite usado nos testes.
 
-O endereço de recuperação está cadastrado no Supabase Auth, e a proprietária informa que a configuração de e-mail está concluída. No login, use **Esqueci minha senha** para solicitar um link e definir uma senha nova. As credenciais administrativas atuais foram mantidas conforme solicitado para esta demonstração. A proteção contra senhas vazadas permanece desativada porque a opção exige um plano superior do Supabase.
+## Hospedagem e atualizações
 
-## Como funciona um pedido
+O serviço do Render está ligado ao repositório do GitHub e à branch main. As mudanças são versionadas e enviadas ao GitHub. O Render está configurado para publicar automaticamente; se uma alteração enviada não iniciar um deploy, acesse o serviço no Render e use **Manual Deploy** para publicar o último commit.
 
-1. O cliente escolhe as peças, tamanhos, cores e quantidades.
-2. O site confere o estoque e registra o pedido no Supabase.
-3. O cliente pode abrir o WhatsApp com o resumo para combinar pagamento e entrega.
-
-O site não cobra pagamentos. O pedido registrado é uma solicitação para atendimento; pagamento, frete e entrega são combinados diretamente com a loja pelo WhatsApp.
+O arquivo render.yaml descreve o serviço, o comando de inicialização e a variável secreta ESTRELA_EDGE_API_TOKEN. O token deve ser configurado nas variáveis privadas do Render e nunca incluído neste repositório.
 
 ## Testes
 
 Na pasta do projeto, execute:
 
-```powershell
-python -m unittest discover -s tests -v
-```
+    python -m unittest discover -s tests -v
 
-Os testes usam um banco SQLite temporário e cobrem pedidos, validação de estoque, categorias, autenticação do painel e regras de acesso. O SQLite é usado nos testes; a loja configurada usa o Supabase.
+Os testes cobrem cadastro e sessão do painel, recuperação de senha no servidor, validação de pedidos e estoque, imagens e ciclo de pedidos no armazenamento SQLite temporário. Eles não enviam e-mails nem substituem a conferência do fluxo real no Supabase.
 
-## Estrutura do projeto
+## Arquivos principais
 
-```text
-├── index.html                       # Vitrine da loja
-├── admin.html                       # Painel administrativo
-├── server.py                        # Servidor local e rotas HTTP
-├── store.py                         # Integração Supabase e armazenamento de teste
-├── catalog.py                       # Produtos fictícios para testes
-├── static/
-│   ├── app.js                        # Catálogo, sacola e pedido
-│   ├── admin.js                      # Ações do painel
-│   ├── styles.css                    # Layout e identidade visual
-│   ├── brand-horizontal.png          # Logotipo oficial
-│   └── brand-mark.png                # Símbolo e ícone da aba
-├── supabase/
-│   ├── schema.sql                    # Estrutura, RLS e permissões
-│   └── functions/estrela-api/        # API protegida
-└── tests/                            # Testes automatizados
-```
+| Arquivo | Para que serve |
+| --- | --- |
+| index.html | Página da loja |
+| admin.html | Tela do painel administrativo |
+| server.py | Servidor web e rotas da aplicação |
+| store.py | Acesso ao Supabase e armazenamento SQLite dos testes |
+| catalog.py | Produtos de exemplo para os testes locais |
+| static/app.js | Catálogo, sacola e envio de pedidos |
+| static/admin.js | Login, cadastro e gerenciamento no painel |
+| static/styles.css | Estilos responsivos da loja e do painel |
+| supabase/schema.sql | Estrutura e regras do banco |
+| supabase/functions/estrela-api/ | Função de API protegida do Supabase |
+| tests/ | Testes automatizados |
 
-## Situação e próximos passos
+## O que falta antes de abrir ao público
 
-### Disponível para demonstração
+Estas etapas foram deixadas para o final, conforme combinado:
 
-- Loja, painel administrativo e fluxo de pedido integrados ao Supabase.
-- Sete produtos de demonstração no banco (cinco visíveis), editáveis pelo painel.
-- Pagamento, entrega e atendimento direcionados ao WhatsApp.
-- Identidade visual oficial aplicada na loja e no painel.
+1. **Cadastrar o catálogo real:** fotos, descrições, preços, tamanhos, cores e estoque conferidos.
+2. **Escolher domínio e hospedagem:** registrar um domínio próprio e escolher um plano que mantenha o site disponível sem a pausa do plano gratuito.
+3. **Definir e publicar as informações da loja:** dados de identificação e políticas definitivas de privacidade, entrega, troca e devolução.
+4. **Definir backups:** no plano gratuito do Supabase, não há backups automáticos disponíveis para download. Escolha uma rotina de exportação segura ou um plano que ofereça o tipo de backup necessário. Consulte a [documentação de backups do Supabase](https://supabase.com/docs/guides/platform/backups).
+5. **Revisar o domínio final:** liberar o endereço de recuperação no Supabase e testar login, recuperação, cadastro e edição de produtos, estoque, pedidos e WhatsApp em celular e computador.
+6. **Revisão de segurança e publicação:** conferir credenciais, chaves, permissões, backups e conteúdo antes de divulgar a loja.
 
-### Antes de abrir ao público
-
-- Substituir os produtos de demonstração por produtos reais, com fotos, descrições, preços, tamanhos, cores e estoque conferidos.
-- Registrar domínio próprio e configurá-lo com HTTPS no Render. O endereço atual é público, mas o plano gratuito pode hibernar; para disponibilidade contínua, será necessário escolher um plano pago.
-- Revisar e publicar os dados de identificação da loja e as políticas definitivas de privacidade, entrega, troca e devolução.
-- Configurar backups e revisar as proteções do banco no ambiente de produção; tabelas e sequências estão bloqueadas para `anon` e `authenticated`, com RLS ativo e acesso apenas pelo serviço.
-- Testar cadastro e edição de produtos, estoque, pedido, login e WhatsApp no domínio final, em computadores e celulares reais.
-
-**Observações de segurança:** a proteção contra senhas vazadas está desativada no plano atual. A proprietária optou por manter as credenciais administrativas e a chave de serviço atuais durante a demonstração. Reavaliar essas escolhas ao preparar o ambiente de produção. O fluxo de recuperação do painel usa o endereço do site de demonstração como destino; ao configurar um domínio próprio, atualizar e liberar esse endereço nas configurações de URL do Supabase Auth.
-
-**Lembrete solicitado:** quando os itens acima estiverem concluídos, fazer a revisão final de segurança, backups, políticas e funcionamento antes de divulgar a loja.
+**Lembrete solicitado:** quando essas etapas estiverem concluídas, fazer a revisão final de segurança, backups, políticas e funcionamento antes de abrir ao público.

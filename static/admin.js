@@ -301,4 +301,12 @@ api("/api/admin/session").then(session => {
     showAuth(!session.configured, session.setupTokenRequired, session.setupAllowed);
     if (recoveryLinkError) document.querySelector("#auth-error").textContent = "Link inválido ou expirado. Solicite uma nova recuperação.";
   }
-}).catch(showError);
+}).catch(error => {
+  if (recoveryAccessToken || recoveryLinkError) {
+    showPasswordReset();
+    if (recoveryAccessToken) document.querySelector("#reset-error").textContent = error.message;
+  } else {
+    showAuth(false);
+    document.querySelector("#auth-error").textContent = error.message;
+  }
+});

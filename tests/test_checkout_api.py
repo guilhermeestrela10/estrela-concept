@@ -12,12 +12,24 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from server import StoreHandler
-from store import Store
+from store import Store, SupabaseStore
 
 
 class IsolatedStoreHandler(StoreHandler):
     store = None
     sessions = {}
+
+
+class RecoveryStore(SupabaseStore):
+    def __init__(self):
+        self.recovery_requests = []
+        self.password_updates = []
+
+    def request_admin_password_reset(self, username, redirect_to):
+        self.recovery_requests.append((username, redirect_to))
+
+    def update_admin_password(self, access_token, password):
+        self.password_updates.append((access_token, password))
 
 
 class CheckoutApiTests(unittest.TestCase):
@@ -40,6 +52,7 @@ class CheckoutApiTests(unittest.TestCase):
         IsolatedStoreHandler.store = Store(Path(self.temp.name) / f"{self._testMethodName}.sqlite3")
         IsolatedStoreHandler.sessions = {"api-test": {"expires": time.monotonic() + 3600}}
         IsolatedStoreHandler.login_attempts.clear()
+        IsolatedStoreHandler.recovery_attempts.clear()
         self.admin_cookie = "estrela_admin=api-test"
 
     def post_checkout(self, items, customer=None):
@@ -211,6 +224,30 @@ class CheckoutApiTests(unittest.TestCase):
         })
         self.assertEqual(status, 401)
         self.assertIn("incorret", result["error"])
+
+    def test_password_recovery_is_generic_and_password_update_clears_session(self):
+        store = RecoveryStore()
+        IsolatedStoreHandler.store = store
+        status, result, _ = self.admin_request("/api/admin/password-recovery", "POST", {"username": "login-admin"})
+        self.assertEqual(status, 200)
+        self.assertIn("Se os dados corresponderem", result["message"])
+        self.assertEqual(store.recovery_requests, [("login-admin", "https://estrela-concept.onrender.com/admin")])
+
+        status, _, cookie = self.admin_request("/api/admin/password-update", "POST", {
+            "accessToken": "recovery-token-which-is-long-enough", "password": "UmaSenhaNovaForte2026!"
+        })
+        self.assertEqual(status, 200)
+        self.assertIn("Max-Age=0", cookie)
+        self.assertEqual(store.password_updates, [("recovery-token-which-is-long-enough", "UmaSenhaNovaForte2026!")])
+
+    def test_password_update_rejects_short_or_missing_recovery_token(self):
+        store = RecoveryStore()
+        IsolatedStoreHandler.store = store
+        status, _, _ = self.admin_request("/api/admin/password-update", "POST", {
+            "accessToken": "short", "password": "UmaSenhaNovaForte2026!"
+        })
+        self.assertEqual(status, 400)
+        self.assertFalse(store.password_updates)
 
     def test_admin_setup_can_only_happen_once(self):
         self.admin_request("/api/admin/setup", "POST", {
