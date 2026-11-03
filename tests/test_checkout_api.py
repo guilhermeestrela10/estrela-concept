@@ -90,11 +90,21 @@ class CheckoutApiTests(unittest.TestCase):
     def test_security_headers_are_set(self):
         with urlopen(f"{self.base_url}/api/status") as response:
             headers = response.headers
+        self.assertEqual(headers["Cache-Control"], "no-store")
         self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
         self.assertEqual(headers["X-Frame-Options"], "DENY")
         self.assertEqual(headers["Referrer-Policy"], "strict-origin-when-cross-origin")
         self.assertIn("frame-ancestors 'none'", headers["Content-Security-Policy"])
         self.assertEqual(headers["Permissions-Policy"], "camera=(), microphone=(), geolocation=()")
+
+    def test_static_assets_can_be_cached_briefly(self):
+        with urlopen(f"{self.base_url}/static/styles.css") as response:
+            self.assertEqual(response.headers["Cache-Control"], "public, max-age=300")
+
+    def test_admin_forms_do_not_prefill_the_username(self):
+        with urlopen(f"{self.base_url}/admin") as response:
+            page = response.read().decode("utf-8")
+        self.assertNotIn('value="login-admin"', page)
 
     def test_unexpected_api_errors_return_a_generic_response(self):
         with patch.object(IsolatedStoreHandler.store, "products", side_effect=RuntimeError("private backend detail")):

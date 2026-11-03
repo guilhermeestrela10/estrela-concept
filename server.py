@@ -131,7 +131,8 @@ class StoreHandler(SimpleHTTPRequestHandler):
         return self.__class__.store
 
     def end_headers(self) -> None:
-        self.send_header("Cache-Control", "no-store")
+        path = urlparse(self.path).path
+        self.send_header("Cache-Control", "public, max-age=300" if path.startswith("/static/") else "no-store")
         self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https:; connect-src 'self'; form-action 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'")
         self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
         self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
