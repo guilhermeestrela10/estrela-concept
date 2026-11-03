@@ -16,3 +16,4 @@ data/*.sqlite3-*
 *.secret
 .env.*
 !.env.example
+graphify-out/

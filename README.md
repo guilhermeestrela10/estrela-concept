@@ -8,7 +8,6 @@
 
 <p align="center">
   <a href="https://estrela-concept.onrender.com/">Abrir a loja</a> ·
-  <a href="https://estrela-concept.onrender.com/admin">Painel administrativo</a> ·
   <a href="https://github.com/guilhermeestrela10/estrela-concept">Repositório no GitHub</a>
 </p>
 
@@ -127,6 +126,7 @@ O catálogo existente contém dados de demonstração. O arquivo `catalog.py` of
 ## Segurança e privacidade
 
 - Segredos de servidor não são enviados ao navegador nem devem ser commitados.
+- A interface do painel faz parte do site e seu código é público neste repositório; a proteção dos dados depende da autenticação e das verificações no servidor e no Supabase, não de esconder a URL.
 - Operações administrativas e dados de pedidos exigem sessão autenticada.
 - O painel utiliza cookies de sessão com validade limitada e proteção contra requisições de outras origens.
 - A criação de pedido valida os dados e atualiza o estoque em uma transação no banco.
