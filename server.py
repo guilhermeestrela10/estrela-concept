@@ -33,14 +33,16 @@ def build_order_notification(order):
     message = EmailMessage()
     message["From"] = f"Estrela Concept <{sender}>"
     message["To"] = os.environ["ORDER_NOTIFICATION_EMAIL"]
-    message["Subject"] = f"Novo pedido recebido · #{order['id']}"
+    is_test = order["id"] == "TESTE"
+    message["Subject"] = "Teste do aviso de pedidos · Estrela Concept" if is_test else f"Novo pedido recebido · #{order['id']}"
     items = "\n".join(
         f"• {item['quantity']}× {item['name']} · {item['size']} · {item['color']}"
         for item in order["items"]
     )
     total = f"R$ {float(order['total']):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    intro = "Este é um e-mail de teste. Nenhum pedido foi criado.\n\n" if is_test else "A Estrela Concept recebeu um novo pedido.\n\n"
     message.set_content(
-        f"A Estrela Concept recebeu um novo pedido.\n\n"
+        intro +
         f"Pedido: #{order['id']}\nItens:\n{items}\nTotal: {total}\n\n"
         "Para ver o telefone do cliente e conversar pelo WhatsApp, acesse o painel administrativo:\n"
         f"{ADMIN_PANEL_URL}\n\nO painel exige login."
@@ -54,8 +56,10 @@ def send_order_notification(order):
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as smtp:
             smtp.login(os.environ["GMAIL_SMTP_USER"], os.environ["GMAIL_APP_PASSWORD"].replace(" ", ""))
             smtp.send_message(message)
+        return True
     except Exception as error:
         print(f"Falha ao enviar aviso por e-mail do pedido #{order.get('id')}: {type(error).__name__}", file=sys.stderr)
+        return False
 
 
 def queue_order_notification(order):
@@ -380,6 +384,18 @@ class StoreHandler(SimpleHTTPRequestHandler):
             elif path == "/api/admin/categories":
                 category = self.admin_call("save_category", payload.get("name"))
                 self.send_json({"category": category}, 201)
+            elif path == "/api/admin/test-email":
+                if not all(os.environ.get(key) for key in ("GMAIL_SMTP_USER", "GMAIL_APP_PASSWORD", "ORDER_NOTIFICATION_EMAIL")):
+                    self.send_json({"error": "Configure o Gmail no Render antes de enviar o teste."}, 503)
+                    return
+                sent = send_order_notification({
+                    "id": "TESTE", "total": 0,
+                    "items": [{"quantity": 1, "name": "Este e-mail é apenas um teste", "size": "—", "color": "—"}],
+                })
+                if sent:
+                    self.send_json({"ok": True, "message": "E-mail de teste enviado. Confira a caixa de entrada e o spam."})
+                else:
+                    self.send_json({"error": "O Gmail recusou ou não conseguiu enviar. Confira a senha de app e os logs do Render."}, 502)
             else:
                 self.send_json({"error": "Endpoint não encontrado."}, 404)
         except OverflowError as error:

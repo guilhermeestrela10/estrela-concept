@@ -291,6 +291,13 @@ document.querySelector("#orders-list").addEventListener("change", async event =>
   try { await api(`/api/admin/orders/${encodeURIComponent(select.dataset.orderStatus)}`, {method:"PATCH",body:JSON.stringify({status:select.value})}); await refresh(); }
   catch(error) { showError(error); await refresh(); }
 });
+document.querySelector("#test-order-email").addEventListener("click", async event => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  try { const result = await api("/api/admin/test-email", {method:"POST", body:"{}"}); showMessage(result.message); }
+  catch(error) { showError(error); }
+  finally { button.disabled = false; }
+});
 api("/api/admin/session").then(session => {
   window.recoveryAvailable = session.recoveryAvailable;
   if (recoveryAccessToken || recoveryLinkError) {

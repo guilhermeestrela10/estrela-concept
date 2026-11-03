@@ -13,6 +13,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from server import StoreHandler, build_order_notification
+import server
 from store import Store, SupabaseStore
 
 
@@ -165,6 +166,29 @@ class CheckoutApiTests(unittest.TestCase):
         self.assertIn("ORDER123", body)
         self.assertIn("Legging Lua", body)
         self.assertNotIn("5586999999999", body)
+
+    def test_admin_can_send_test_email_without_creating_an_order(self):
+        with patch.dict(os.environ, {
+            "GMAIL_SMTP_USER": "estrelaconcept0@gmail.com",
+            "GMAIL_APP_PASSWORD": "test-app-password",
+            "ORDER_NOTIFICATION_EMAIL": "estrelaconcept0@gmail.com",
+        }), patch.object(server, "send_order_notification", return_value=True) as send_email:
+            request = Request(f"{self.base_url}/api/admin/test-email", data=b"{}", headers={
+                "Content-Type": "application/json", "Cookie": self.admin_cookie,
+            }, method="POST")
+            with urlopen(request, timeout=2) as response:
+                result = json.load(response)
+            self.assertTrue(result["ok"])
+            self.assertEqual(send_email.call_count, 1)
+            self.assertEqual(IsolatedStoreHandler.store.orders(), [])
+
+    def test_test_email_requires_admin_authentication(self):
+        request = Request(f"{self.base_url}/api/admin/test-email", data=b"{}", headers={
+            "Content-Type": "application/json",
+        }, method="POST")
+        with self.assertRaises(HTTPError) as error:
+            urlopen(request, timeout=2)
+        self.assertEqual(error.exception.code, 401)
 
     def test_admin_can_create_category_and_product(self):
         def post(path, payload):
