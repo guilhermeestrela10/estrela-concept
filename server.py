@@ -114,6 +114,9 @@ class StoreHandler(SimpleHTTPRequestHandler):
     sessions = {}
     login_attempts = defaultdict(deque)
     recovery_attempts = defaultdict(deque)
+    checkout_attempts = defaultdict(deque)
+    checkout_global = deque()
+    login_failures = deque()
 
     def __init__(self, *args, **kwargs):
         self.response_started = False
@@ -192,6 +195,22 @@ class StoreHandler(SimpleHTTPRequestHandler):
     def client_ip(self):
         return self.headers.get("CF-Connecting-IP") or self.client_address[0]
 
+    def attempts_for(self, table):
+        # IPs forjados não podem inflar a memória: passando do teto, recomeça do zero.
+        if len(table) > 5000:
+            table.clear()
+        return table[self.client_ip()]
+
+    @staticmethod
+    def rate_limited(attempts, limit, window):
+        now = time.monotonic()
+        while attempts and now - attempts[0] > window:
+            attempts.popleft()
+        if len(attempts) >= limit:
+            return True
+        attempts.append(now)
+        return False
+
     def require_admin(self):
         if not self.origin_is_same():
             self.send_json({"error": "Origem da solicitação não permitida."}, 403)
@@ -211,11 +230,11 @@ class StoreHandler(SimpleHTTPRequestHandler):
 
     def create_admin_session(self, token=None):
         if token:
-            secure = urlparse(self.headers.get("Origin", "")).scheme == "https"
+            secure = self.headers.get("X-Forwarded-Proto") == "https" or urlparse(self.headers.get("Origin", "")).scheme == "https"
             return f"estrela_admin={token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=28800" + ("; Secure" if secure else "")
         token = secrets.token_urlsafe(32)
         self.__class__.sessions[token] = {"expires": time.monotonic() + 8 * 60 * 60}
-        secure = urlparse(self.headers.get("Origin", "")).scheme == "https"
+        secure = self.headers.get("X-Forwarded-Proto") == "https" or urlparse(self.headers.get("Origin", "")).scheme == "https"
         return f"estrela_admin={token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=28800" + ("; Secure" if secure else "")
 
     def do_GET(self) -> None:
@@ -324,7 +343,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
                 if not isinstance(store, SupabaseStore):
                     self.send_json({"error": "A recuperação de senha exige conexão com o Supabase."}, 503)
                     return
-                attempts = self.__class__.recovery_attempts[self.client_ip()]
+                attempts = self.attempts_for(self.__class__.recovery_attempts)
                 now = time.monotonic()
                 while attempts and now - attempts[0] > 300:
                     attempts.popleft()
@@ -380,11 +399,15 @@ class StoreHandler(SimpleHTTPRequestHandler):
                 if not store.admin_configured():
                     self.send_json({"error": "Configure o acesso administrativo antes de entrar."}, 409)
                     return
-                attempts = self.__class__.login_attempts[self.client_ip()]
+                attempts = self.attempts_for(self.__class__.login_attempts)
                 now = time.monotonic()
                 while attempts and now - attempts[0] > 300:
                     attempts.popleft()
-                if len(attempts) >= 5:
+                failures = self.__class__.login_failures
+                while failures and now - failures[0] > 300:
+                    failures.popleft()
+                # Teto global: vale mesmo se o atacante forjar o IP de origem.
+                if len(attempts) >= 5 or len(failures) >= 30:
                     self.send_json({"error": "Muitas tentativas. Aguarde 5 minutos antes de tentar novamente."}, 429)
                     return
                 if isinstance(store, SupabaseStore):
@@ -394,12 +417,14 @@ class StoreHandler(SimpleHTTPRequestHandler):
                         login = None
                     if not login:
                         attempts.append(now)
+                        failures.append(now)
                         self.send_json({"error": "Usuário ou senha incorretos."}, 401)
                         return
                     cookie = self.create_admin_session(login["sessionToken"])
                 else:
                     if not store.verify_admin(payload.get("username"), payload.get("password")):
                         attempts.append(now)
+                        failures.append(now)
                         self.send_json({"error": "Usuário ou senha incorretos."}, 401)
                         return
                     cookie = self.create_admin_session()
@@ -419,6 +444,10 @@ class StoreHandler(SimpleHTTPRequestHandler):
             if path.startswith("/api/admin/") and not self.require_admin():
                 return
             if path == "/api/checkout":
+                if self.rate_limited(self.attempts_for(self.__class__.checkout_attempts), 20, 600) \
+                        or self.rate_limited(self.__class__.checkout_global, 200, 3600):
+                    self.send_json({"error": "Muitos pedidos em pouco tempo. Tente novamente em alguns minutos."}, 429)
+                    return
                 order = self.get_store().create_order(payload.get("customer"), payload.get("items"))
                 queue_order_notification(order)
                 self.send_json({"ok": True, **order, "message": "Pedido registrado."})

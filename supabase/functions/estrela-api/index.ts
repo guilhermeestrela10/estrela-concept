@@ -33,7 +33,15 @@ async function auth(path: string, method: string, body: unknown, key: string, ac
   return { response, data: text ? JSON.parse(text) : null };
 }
 
+async function sameSecret(a: string, b: string) {
+  const [x, y] = await Promise.all([a, b].map(async (v) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(v)))));
+  return x.reduce((diff, byte, i) => diff | (byte ^ y[i]), 0) === 0;
+}
+
 async function authorized(request: Request) {
+  // Com o secret ESTRELA_EDGE_API_TOKEN definido na função, só o token em si vale (o hash sozinho não entra).
+  const edgeToken = Deno.env.get("ESTRELA_EDGE_API_TOKEN");
+  if (edgeToken) return await sameSecret(request.headers.get("x-estrela-token") ?? "", edgeToken);
   const tokenHash = request.headers.get("x-estrela-token-sha256") ?? "";
   if (!/^[a-f0-9]{64}$/.test(tokenHash)) return false;
   return await db("rpc/edge_verify_token", "POST", { p_token_hash: tokenHash }) === true;
@@ -94,6 +102,7 @@ async function adminLogin(payload: any) {
   const token = newSessionToken();
   const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
   await db("admin_sessions", "POST", { token_hash: await sessionHash(token), user_id: accounts[0].auth_user_id, expires_at: expiresAt }, "return=minimal");
+  await db(`admin_sessions?expires_at=lt.${encodeURIComponent(new Date().toISOString())}`, "DELETE").catch(() => {});
   await auth("logout", "POST", {}, publishableKey, signedIn.data.access_token).catch(() => {});
   return { ok: true, sessionToken: token, expiresAt };
 }

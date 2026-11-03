@@ -55,6 +55,9 @@ class CheckoutApiTests(unittest.TestCase):
         IsolatedStoreHandler.sessions = {"api-test": {"expires": time.monotonic() + 3600}}
         IsolatedStoreHandler.login_attempts.clear()
         IsolatedStoreHandler.recovery_attempts.clear()
+        IsolatedStoreHandler.checkout_attempts.clear()
+        IsolatedStoreHandler.checkout_global.clear()
+        IsolatedStoreHandler.login_failures.clear()
         self.admin_cookie = "estrela_admin=api-test"
 
     def post_checkout(self, items, customer=None):
@@ -122,6 +125,10 @@ class CheckoutApiTests(unittest.TestCase):
         ])
         self.assertEqual(status, 200)
         self.assertEqual(result["total"], 279.8)
+
+    def test_checkout_is_rate_limited_per_ip(self):
+        statuses = [self.post_checkout([])[0] for _ in range(25)]
+        self.assertEqual(statuses.count(429), 5)
 
     def test_checkout_rejects_quantity_above_stock(self):
         status, result = self.post_checkout([
