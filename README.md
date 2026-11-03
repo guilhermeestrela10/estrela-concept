@@ -10,7 +10,7 @@
 - **Painel administrativo:** [abrir o painel](https://estrela-concept.onrender.com/admin)
 - **Código no GitHub:** [guilhermeestrela10/estrela-concept](https://github.com/guilhermeestrela10/estrela-concept)
 
-O endereço do painel também pode ser encontrado no rodapé da loja. A página de administração exige login.
+O painel não tem link na loja pública. Para acessá-lo, abra diretamente o endereço `/admin`; a página exige login.
 
 ## O que o site faz
 
