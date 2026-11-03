@@ -341,7 +341,6 @@ footer small { font-size: 9px; }
 .product-image-item small { color: var(--muted); font-size: 9px; }
 .product-image-item button { width: 30px; height: 30px; border: 1px solid var(--line); background: white; cursor: pointer; }
 .product-image-item button:disabled { opacity: .35; cursor: default; }
-.new-image-list .product-image-item { grid-template-columns: 42px minmax(0,1fr) 32px 32px 32px; }
 .image-list-empty { margin: 0; color: var(--muted); font-size: 10px; }
 .admin-submit { width: 100%; }
 .admin-auth { min-height: calc(100vh - 76px); display: grid; place-items: center; padding: 35px 16px; }
