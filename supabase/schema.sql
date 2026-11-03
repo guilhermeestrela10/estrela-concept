@@ -85,10 +85,11 @@ alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
 alter table public.edge_api_tokens enable row level security;
 
-grant select on public.categories, public.products, public.product_images, public.product_variants to anon, authenticated;
-grant all on public.categories, public.products, public.product_images, public.product_variants, public.orders, public.order_items to service_role;
-revoke all on public.edge_api_tokens from public, anon, authenticated;
-grant select on public.edge_api_tokens to service_role;
+revoke all on public.categories, public.products, public.product_images, public.product_variants,
+  public.orders, public.order_items, public.edge_api_tokens from public, anon, authenticated;
+grant all on public.categories, public.products, public.product_images, public.product_variants,
+  public.orders, public.order_items, public.edge_api_tokens to service_role;
+revoke all on all sequences in schema public from public, anon, authenticated;
 grant usage, select on all sequences in schema public to service_role;
 
 create policy "active categories are public" on public.categories

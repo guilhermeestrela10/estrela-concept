@@ -5,6 +5,7 @@
   --header-height: 82px;
 }
 * { box-sizing: border-box; }
+body.cart-is-open { overflow: hidden; }
 [hidden] { display: none !important; }
 html { scroll-behavior: smooth; scroll-padding-top: calc(var(--header-height) + env(safe-area-inset-top) + 12px); }
 body { margin: 0; padding-top: env(safe-area-inset-top); background: var(--paper); color: var(--ink); font: 14px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }

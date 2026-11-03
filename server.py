@@ -40,6 +40,11 @@ class StoreHandler(SimpleHTTPRequestHandler):
 
     def end_headers(self) -> None:
         self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https:; connect-src 'self'; form-action 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'")
+        self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
         super().end_headers()
 
     def send_json(self, data: dict, status: int = 200, headers: dict | None = None) -> None:

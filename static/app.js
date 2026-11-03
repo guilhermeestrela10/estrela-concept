@@ -145,11 +145,11 @@ function renderCart() {
 
 function showCart() {
   cartReturnFocus = document.activeElement;
-  overlay.hidden = false; cartPanel.hidden = false; document.body.style.overflow = "hidden";
+  overlay.hidden = false; cartPanel.hidden = false; document.body.classList.add("cart-is-open");
   document.querySelector("#cart-close").focus();
 }
 function hideCart() {
-  overlay.hidden = true; cartPanel.hidden = true; document.body.style.overflow = "";
+  overlay.hidden = true; cartPanel.hidden = true; document.body.classList.remove("cart-is-open");
   if (cartReturnFocus?.isConnected) cartReturnFocus.focus();
 }
 function whatsappUrl(message) { return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`; }

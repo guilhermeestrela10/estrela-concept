@@ -90,7 +90,7 @@ O texto acima é apenas um exemplo de configuração. Não coloque o token real 
 
 Abra `/admin` e entre com a conta administrativa configurada para o projeto. A senha não fica armazenada neste repositório. Se o Supabase ainda não tiver uma conta administrativa, a configuração inicial só pode ser feita uma vez e exige uma solicitação local ou o token de configuração definido no servidor. Não tente recriar uma conta já configurada.
 
-O endereço de e-mail técnico usado pelo Auth não recebe mensagens. Antes da publicação, configure um e-mail válido para recuperação da conta e revise a senha administrativa.
+O e-mail da conta administrativa foi atualizado para um endereço válido de recuperação. O painel ainda não tem uma tela de redefinição de senha. Antes da publicação, configure e teste o envio de e-mails do Supabase, habilite a proteção contra senhas vazadas nas configurações de Auth e troque a senha administrativa por uma senha exclusiva.
 
 ## Como funciona um pedido
 
@@ -143,9 +143,10 @@ Os testes usam um banco SQLite temporário e cobrem pedidos, validação de esto
 
 - Substituir os produtos de demonstração por produtos reais, com fotos, descrições, preços, tamanhos, cores e estoque conferidos.
 - Contratar e configurar hospedagem permanente, domínio e HTTPS. O túnel atual é temporário e depende desta máquina ligada e conectada à internet.
-- Atualizar o acesso administrativo: usar uma senha nova e configurar um endereço de e-mail válido para recuperação.
+- Antes da publicação, trocar a senha administrativa por uma senha exclusiva e forte, configurar/testar o envio de e-mails de recuperação e habilitar a proteção contra senhas vazadas no Supabase Auth.
+- Revogar qualquer chave secreta que tenha sido compartilhada durante o desenvolvimento e atualizar as secrets da Edge Function e do servidor. Não coloque chaves secretas neste repositório.
 - Revisar e publicar os dados de identificação da loja e as políticas definitivas de privacidade, entrega, troca e devolução.
-- Configurar backups e revisar as proteções do banco no ambiente de produção.
+- Configurar backups e revisar as proteções do banco no ambiente de produção; tabelas e sequências estão bloqueadas para `anon` e `authenticated`, com RLS ativo e acesso apenas pelo serviço.
 - Testar cadastro e edição de produtos, estoque, pedido, login e WhatsApp no domínio final, em computadores e celulares reais.
 
 **Lembrete solicitado:** quando os itens acima estiverem concluídos, fazer a revisão final de segurança, backups, políticas e funcionamento antes de divulgar a loja.

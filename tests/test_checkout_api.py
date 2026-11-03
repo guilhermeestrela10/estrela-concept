@@ -57,6 +57,15 @@ class CheckoutApiTests(unittest.TestCase):
         with response:
             return response.status, json.load(response)
 
+    def test_security_headers_are_set(self):
+        with urlopen(f"{self.base_url}/api/status") as response:
+            headers = response.headers
+        self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
+        self.assertEqual(headers["X-Frame-Options"], "DENY")
+        self.assertEqual(headers["Referrer-Policy"], "strict-origin-when-cross-origin")
+        self.assertIn("frame-ancestors 'none'", headers["Content-Security-Policy"])
+        self.assertEqual(headers["Permissions-Policy"], "camera=(), microphone=(), geolocation=()")
+
     def test_checkout_uses_server_price_and_returns_subtotal(self):
         status, result = self.post_checkout([
             {"productId": "legging-lua", "size": "M", "color": "Preto", "quantity": 2, "price": 0}
