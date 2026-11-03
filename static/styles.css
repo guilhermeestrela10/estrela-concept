@@ -112,6 +112,7 @@ footer small { font-size: 9px; }
 .policy-main > h1 em { color: var(--pink-dark); }
 .policy-notice { padding: 16px 18px; border-left: 3px solid var(--pink-dark); background: #faeeee; color: #655c5e; font-size: 12px; line-height: 1.7; }
 .policy-notice strong { color: var(--ink); }
+.policy-notice a { color: var(--pink-dark); text-underline-offset: 3px; }
 .policy-index { display: flex; flex-wrap: wrap; gap: 10px 22px; padding: 22px 0; border-bottom: 1px solid var(--line); }
 .policy-index a, .policy-section a { color: var(--pink-dark); text-decoration: underline; text-underline-offset: 3px; }
 .policy-index a { font-size: 12px; }

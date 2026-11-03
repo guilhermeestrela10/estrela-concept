@@ -281,7 +281,9 @@ class CheckoutApiTests(unittest.TestCase):
         self.assertIn("Troca e atendimento por defeito", page)
         self.assertIn("Direito de desistir da compra online", page)
         self.assertIn("7 dias", page)
-        self.assertIn("CPF/CNPJ da fornecedora não foram informados", page)
+        self.assertIn("Nome empresarial (se houver):", page)
+        self.assertIn("CPF ou CNPJ da fornecedora:", page)
+        self.assertIn("[PREENCHER — rua, número, complemento, bairro, cidade/UF e CEP]", page)
 
     def test_https_response_includes_hsts(self):
         request = Request(f"{self.base_url}/", headers={"X-Forwarded-Proto": "https"})

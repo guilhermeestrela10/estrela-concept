@@ -156,7 +156,7 @@ O `.gitignore` exclui arquivos `.env`, bancos SQLite em `data/`, logs do servido
 
 ### Políticas da loja
 
-A rota [`/politicas`](https://estrela-concept.onrender.com/politicas) apresenta a política de privacidade e explica pedidos, pagamento, entrega e atendimento de produtos com defeito. A troca por defeito está separada do direito legal de desistir de uma compra online; esse direito de 7 dias não pode ser removido. A página foi escrita com base nas regras brasileiras citadas nela, mas ainda falta a responsável informar o CPF/CNPJ e o endereço físico da fornecedora. Antes de vender ao público, também é necessário confirmar regiões, modalidades, custos e prazos de entrega, procedimentos práticos de devolução e os prazos internos de retenção dos dados. O texto não substitui uma análise jurídica individual.
+A rota [`/politicas`](https://estrela-concept.onrender.com/politicas) apresenta a política de privacidade e explica pedidos, pagamento, entrega e atendimento de produtos com defeito. A troca por defeito está separada do direito legal de desistir de uma compra online; esse direito de 7 dias não pode ser removido. A página tem campos destacados para confirmar o nome empresarial, preencher CPF/CNPJ e endereço físico completo. Antes de vender ao público, também é necessário confirmar regiões, modalidades, custos e prazos de entrega, procedimentos práticos de devolução, prazos de retenção dos dados e o mecanismo jurídico aplicável às transferências internacionais de dados. O texto não substitui uma análise jurídica individual.
 
 ### Backup automático do banco
 
@@ -233,7 +233,9 @@ O site está pronto para demonstração. Os itens abaixo precisam ser concluído
 
 - [ ] Substituir os produtos de demonstração por cadastro real: nome, descrição, preço, fotos, tamanhos, cores e quantidades em estoque. Isso pode ser feito pelo painel administrativo depois da validação dos dados.
 - [ ] Conferir se cada foto pode ser usada comercialmente e se corresponde ao produto e às variações exibidas.
-- [ ] Revisar e aprovar a página `/politicas`: informar os dados de identificação e contato da loja, regiões atendidas, opções e custos de entrega, prazos e regras práticas para troca e devolução. Pagamento e atendimento continuam combinados pelo WhatsApp.
+- [ ] Confirmar o nome empresarial, quando houver, e preencher na página `/politicas` o CPF/CNPJ e o endereço físico completo da fornecedora (rua, número, complemento, bairro, cidade/UF e CEP).
+- [ ] Revisar e aprovar as condições de venda: regiões atendidas, opções, custos e prazos de entrega, retirada e procedimentos de troca/devolução por defeito. Pagamento e atendimento continuam combinados pelo WhatsApp antes de concluir a compra.
+- [ ] Definir quem monitora o WhatsApp e o e-mail da loja e garantir confirmação imediata de recebimento e resposta às solicitações nos prazos informados na política.
 - [ ] Confirmar os dados públicos da loja, especialmente telefone/WhatsApp, e-mail de contato e nome da responsável.
 
 ### E-mail de pedidos e atendimento
@@ -256,6 +258,7 @@ O site está pronto para demonstração. Os itens abaixo precisam ser concluído
 - [ ] Revisar quem tem acesso de administrador ao GitHub, Render e Supabase, ativar autenticação multifator nessas contas e remover acessos que não sejam mais necessários.
 - [ ] Habilitar a proteção contra senhas vazadas no Supabase quando o plano permitir. A opção está desativada no plano atual.
 - [ ] Confirmar que os links de recuperação de senha do Supabase incluem os endereços finais do site e que o e-mail de recuperação chega à conta correta.
+- [ ] Confirmar a base legal e o mecanismo aplicável às transferências internacionais de dados feitas pelos fornecedores, conforme a LGPD e a Resolução CD/ANPD nº 19/2024.
 - [ ] Manter segredos fora do repositório público. Se um segredo aparecer no Git, em logs ou em mensagens, revogá-lo e criar outro; apagar o arquivo atual não remove a cópia do histórico do Git.
 
 ### Domínio, hospedagem e validação final
