@@ -100,6 +100,9 @@ footer { padding: 28px 6.5% calc(28px + env(safe-area-inset-bottom)); display: f
 .brand-footer .brand-logo { width: 160px; }
 .footer-star { margin-left: 4px; color: var(--pink-dark); }
 footer small { font-size: 9px; }
+.admin-access { color: inherit; font-size: 9px; text-decoration: none; }
+.admin-access:hover, .admin-access:focus-visible { color: var(--pink-dark); text-decoration: underline; }
+.admin-access:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
 .overlay { position: fixed; inset: 0; z-index: 8; background: #1f181861; }
 .cart-panel { position: fixed; top: env(safe-area-inset-top); right: 0; bottom: env(safe-area-inset-bottom); z-index: 9; width: min(430px,100%); padding: 28px; display: flex; flex-direction: column; background: var(--paper); box-shadow: -15px 0 45px #1e13101a; }
 .cart-head { padding-bottom: 21px; display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 1px solid var(--line); }
