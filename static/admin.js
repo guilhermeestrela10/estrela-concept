@@ -28,7 +28,7 @@ function showAuth(setup, tokenRequired = false, setupAllowed = true) {
   document.querySelector("#setup-token-label").hidden = !setup || !tokenRequired;
   document.querySelector("#auth-title").textContent = setup ? "Crie seu acesso" : "Acesso ao painel";
   document.querySelector("#auth-description").textContent = setup
-    ? "Crie o acesso de administrador, protegido pelo Supabase Auth. Use pelo menos 12 caracteres."
+    ? "Crie seu acesso de administrador. Use pelo menos 12 caracteres."
     : "Entre com seu usuário e senha.";
   document.querySelector("#auth-submit").textContent = setup ? "Criar acesso e entrar" : "Entrar";
   document.querySelector("#forgot-password").hidden = setup || !window.recoveryAvailable;
@@ -54,11 +54,11 @@ function showAdmin() {
 function showError(error) { notice.textContent = error.message; notice.classList.add("error"); }
 function showMessage(message) { notice.textContent = message; notice.classList.remove("error"); }
 fetch("/api/status").then(response => response.json()).then(status => {
-  const online = status.backend === "supabase";
-  document.querySelector("#backend-label").textContent = online ? "ESTRELA CONCEPT · SUPABASE ONLINE" : "ESTRELA CONCEPT · SUPABASE OFFLINE";
+  const online = status.backend === "online";
+  document.querySelector("#backend-label").textContent = online ? "ESTRELA CONCEPT · PAINEL CONECTADO" : "ESTRELA CONCEPT · PAINEL OFFLINE";
   document.querySelector("#backend-footnote").textContent = online
-    ? "Dados no Supabase. Os produtos do catálogo são exemplos editáveis."
-    : status.error || "Configure a conexão segura com o Supabase no servidor.";
+    ? "Dados da loja conectados. Os produtos do catálogo são exemplos editáveis."
+    : "Não foi possível conectar aos dados da loja. Tente novamente mais tarde.";
 }).catch(() => {});
 async function refresh() {
   notice.textContent = "Carregando dados…";
@@ -256,7 +256,7 @@ document.querySelector("#product-form").addEventListener("submit", async event =
       if (failedUpload) throw failedUpload.reason;
       uploadedImages = uploads.map(result => result.value);
     }
-    uploadStatus.textContent = files.length ? `${files.length} foto(s) enviada(s) ao Supabase.` : "";
+    uploadStatus.textContent = files.length ? `${files.length} foto(s) enviada(s).` : "";
     const uploadedByFile = new Map(files.map((file, index) => [file, uploadedImages[index]]));
     const images = imageItems.map(item => item.kind === "file" ? uploadedByFile.get(item.file) : item.url);
     const product = { id, name:data.get("name").trim(), category:data.get("category"), price:Number(data.get("price")), tagline:data.get("tagline").trim(), description:data.get("description").trim(), images, image:images[0], variants, active:form.elements.active.checked };

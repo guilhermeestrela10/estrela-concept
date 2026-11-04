@@ -65,9 +65,9 @@ class SupabaseStore:
             detail = error.read().decode("utf-8", "replace")
             try: detail = json.loads(detail).get("message", detail)
             except (ValueError, AttributeError): pass
-            raise ValueError("Supabase: " + str(detail)[:300]) from None
+            raise ValueError("Não foi possível concluir a operação. Tente novamente mais tarde.") from None
         except (urllib.error.URLError, TimeoutError) as error:
-            raise ValueError("Não foi possível conectar ao Supabase.") from error
+            raise ValueError("Não foi possível conectar ao serviço de dados.") from None
 
     def categories(self): return self._call("categories")["categories"]
     def products(self, include_inactive=False, session_token=None):

@@ -161,7 +161,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
         if self.__class__.store is None:
             self.__class__.store = SupabaseStore.configured()
             if self.__class__.store is None:
-                raise ValueError("Configure ESTRELA_EDGE_API_TOKEN para conectar ao Supabase.")
+                raise ValueError("Não foi possível conectar aos dados da loja. Tente novamente mais tarde.")
         return self.__class__.store
 
     def end_headers(self) -> None:
@@ -284,7 +284,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
     def _do_GET(self) -> None:
         path = urlparse(self.path).path
         if path == "/api/status":
-            self.send_json({"backend": "supabase" if isinstance(self.get_store(), SupabaseStore) else "local"})
+            self.send_json({"backend": "online" if isinstance(self.get_store(), SupabaseStore) else "local"})
             return
         if path == "/api/admin/session":
             self.send_json({"configured": self.get_store().admin_configured(), "authenticated": bool(self.admin_session()),
@@ -366,7 +366,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
                 content_type, image = self.read_image_upload()
                 store = self.get_store()
                 if not isinstance(store, SupabaseStore):
-                    self.send_json({"error": "O envio de fotos exige o armazenamento Supabase."}, 503)
+                    self.send_json({"error": "O serviço de fotos está indisponível. Tente novamente mais tarde."}, 503)
                     return
                 self.send_json({"url": self.admin_call("upload_product_image", content_type, image)})
                 return
@@ -377,7 +377,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
             if path == "/api/admin/password-recovery":
                 store = self.get_store()
                 if not isinstance(store, SupabaseStore):
-                    self.send_json({"error": "A recuperação de senha exige conexão com o Supabase."}, 503)
+                    self.send_json({"error": "A recuperação de senha está indisponível no momento."}, 503)
                     return
                 attempts = self.attempts_for(self.__class__.recovery_attempts)
                 now = time.monotonic()
@@ -402,7 +402,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
                 store = self.get_store()
                 token, password = payload.get("accessToken"), payload.get("password")
                 if not isinstance(store, SupabaseStore):
-                    self.send_json({"error": "A redefinição de senha exige conexão com o Supabase."}, 503)
+                    self.send_json({"error": "A redefinição de senha está indisponível no momento."}, 503)
                     return
                 if not isinstance(token, str) or not 20 <= len(token) <= 4096 or not isinstance(password, str) or not 12 <= len(password) <= 256:
                     self.send_json({"error": "Link inválido ou expirado. Solicite uma nova recuperação."}, 400)

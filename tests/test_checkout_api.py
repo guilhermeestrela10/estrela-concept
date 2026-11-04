@@ -284,6 +284,12 @@ class CheckoutApiTests(unittest.TestCase):
         self.assertIn("Teresina/PI", page)
         self.assertIn("3 dias úteis", page)
         self.assertIn("a revisão e a exclusão devem ser feitas manualmente", page)
+        for provider in ("Supabase", "Render", "Resend", "Visual Studio Code"):
+            self.assertNotIn(provider, page)
+        with urlopen(f"{self.base_url}/static/admin.js", timeout=2) as response:
+            dashboard_script = response.read().decode("utf-8")
+        for provider in ("Supabase", "Render", "Resend", "Visual Studio Code"):
+            self.assertNotIn(provider, dashboard_script)
         self.assertIn("Nome empresarial (se houver):", page)
         self.assertIn("CPF ou CNPJ da fornecedora:", page)
         self.assertIn("[PREENCHER — rua, número, complemento, bairro, cidade/UF e CEP]", page)
@@ -325,7 +331,7 @@ class CheckoutApiTests(unittest.TestCase):
             with self.assertRaises(HTTPError) as error:
                 urlopen(f"{self.base_url}/api/status", timeout=2)
             self.assertEqual(error.exception.code, 503)
-            self.assertIn("Supabase", json.load(error.exception)["error"])
+            self.assertNotIn("Supabase", json.load(error.exception)["error"])
         finally:
             IsolatedStoreHandler.store = previous_store
             if previous_token is None:
