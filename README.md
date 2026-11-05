@@ -226,11 +226,25 @@ O projeto mantém os arquivos de entrada do serviço na raiz para que o Render e
 
 ## Publicação e domínio
 
-O código está conectado ao repositório GitHub e à hospedagem atual no Render. A URL `onrender.com` é adequada para demonstração e pode ser substituída por um domínio próprio depois. O plano gratuito do Render pode suspender o serviço após inatividade; a primeira visita após a pausa pode demorar. Projetos gratuitos do Supabase também podem ser pausados por inatividade.
+O site está publicado no Render para demonstração em <https://estrela-concept.onrender.com>. A instância gratuita pode suspender o serviço após 15 minutos sem tráfego e levar cerca de um minuto para voltar na próxima visita. O sistema continuará usando o Supabase como banco principal e o MongoDB Atlas para as métricas; a troca de hospedagem não exige migrar esses bancos.
 
-### Migração futura para a Hostinger
+### Plano escolhido para a publicação definitiva
 
-A migração será planejada quando a proprietária escolher e contratar um plano Hostinger. Antes de mover o site, vamos confirmar que o plano aceita o servidor Python e o modo de execução necessários. A migração deverá configurar variáveis secretas, HTTPS, domínio e redirecionamentos de recuperação no Supabase, testar o painel, pedidos, estoque, imagens e notificações de e-mail, mantendo o Supabase como banco enquanto for adequado. Não é necessário comprar domínio agora; ele pode ser conectado depois.
+A opção escolhida é **Hostinger VPS**, porque a aplicação roda em Python. A hospedagem compartilhada comum não é o destino planejado. A preferência atual de domínio é **`estrelaconcept.com.br`**, por ter a renovação mais barata entre as duas opções comparadas; confirme disponibilidade e preço no carrinho antes de pagar. Se a prioridade voltar a ser o endereço exato `estrelaconcept.com`, será preciso escolher essa extensão e aceitar a renovação maior.
+
+Valores promocionais consultados em **5 de novembro de 2026** (podem mudar):
+
+| Item | Oferta consultada | Renovação consultada | Para que serve |
+| --- | ---: | ---: | --- |
+| Hostinger VPS KVM 1 | R$ 719,76 pagos por 24 meses (equivale a R$ 29,99/mês) | R$ 59,99/mês pelo mesmo período | Manter o servidor Python da loja ativo |
+| Domínio `.com.br` | R$ 1 no primeiro ano | R$ 64,99/ano | Endereço próprio da loja no Brasil |
+| Domínio `.com` (comparação) | R$ 0,01 no primeiro ano | R$ 94,99/ano | Endereço internacional da marca |
+
+Confira as condições vigentes diretamente nas páginas da [VPS Hostinger](https://www.hostinger.com/br/servidor-vps), do [domínio .com.br](https://www.hostinger.com/br/tld/dominio-com-br) e do [domínio .com](https://www.hostinger.com/br/tld/dominio-com). O domínio e a hospedagem ainda **não foram comprados**. Não é preciso manter Render pago depois da migração; até lá, o Render atual serve para demonstração. O certificado HTTPS será configurado para o domínio no servidor escolhido.
+
+### Migração futura
+
+Depois da compra, será necessário configurar o servidor Python, transferir o código da `main`, cadastrar nele os segredos que hoje pertencem ao ambiente de execução, apontar o domínio e ativar HTTPS. Também serão ajustados os endereços de recuperação do Supabase e o remetente de e-mail, seguidos de uma validação do painel, pedidos, estoque, fotos, métricas, e-mail e WhatsApp. Nenhuma senha, chave ou URI privada deve ser enviada por mensagem ou commitada no Git.
 
 ## Branches e publicação
 
@@ -241,6 +255,16 @@ Depois de cada publicação, confirme no Render que o deploy terminou com sucess
 ## Lista para concluir o projeto
 
 O site está pronto para demonstração. Os itens abaixo precisam ser concluídos ou confirmados pela responsável antes de anunciar vendas ao público:
+
+### Decisões e configurações já concluídas
+
+- [x] Definir a hospedagem definitiva: Hostinger VPS, adequada à aplicação Python.
+- [x] Escolher como preferência atual o domínio `.com.br`, por ter renovação menor na comparação consultada. A compra e a disponibilidade ainda precisam ser confirmadas.
+- [x] Conectar as métricas de visualização ao MongoDB Atlas e confirmar contagens no painel administrativo.
+- [x] Implementar no servidor o envio de avisos de pedidos por e-mail via Resend. A configuração e a entrega de um pedido real ainda precisam ser validadas no ambiente publicado.
+- [x] Manter produtos, pedidos, estoque e autenticação no Supabase; o MongoDB é usado apenas para métricas agregadas.
+- [x] Manter a área administrativa fora da navegação pública e protegida por autenticação.
+- [x] Definir a área atual de atendimento como Teresina/PI e região, e o prazo de retenção solicitado para pedidos encerrados como até 3 dias úteis, com tratativas abertas mantidas durante a negociação.
 
 ### Conteúdo e regras comerciais
 
@@ -258,11 +282,9 @@ O site está pronto para demonstração. Os itens abaixo precisam ser concluído
 
 ### E-mail de pedidos e atendimento
 
-- **Estado verificado:** o código diferencia configuração de aviso por e-mail e o painel informa quando ela não está ativa. O serviço precisa ter `RESEND_API_KEY` e `ORDER_NOTIFICATION_EMAIL`; a entrega real ainda não foi validada com uma mensagem de pedido em produção.
-- [ ] Criar uma chave de API no Resend e cadastrá-la como `RESEND_API_KEY` diretamente nas variáveis privadas do Render.
-- [ ] Definir `ORDER_NOTIFICATION_EMAIL` com o endereço que deve receber os pedidos.
-- [ ] Verificar um domínio de envio no Resend e configurar `RESEND_FROM_EMAIL` com um remetente autorizado. O endereço de demonstração `onboarding@resend.dev` tem limitações e não é substituto de um remetente da loja validado.
-- [ ] Salvar as variáveis e aguardar o deploy do Render. Fazer um pedido de teste e confirmar a chegada do e-mail, o link protegido para `/admin` e a conversa com a cliente pelo WhatsApp. O código não reenvia automaticamente avisos que falharem; confira o pedido no painel mesmo quando a mensagem de e-mail não chegar.
+- **Estado do código:** o servidor já tenta enviar o aviso pelo Resend e mantém o pedido no sistema caso o envio falhe. A existência da integração não confirma que a notificação esteja configurada e entregando e-mails no serviço publicado.
+- [ ] Configurar `RESEND_API_KEY`, `ORDER_NOTIFICATION_EMAIL` e um `RESEND_FROM_EMAIL` autorizado no ambiente publicado. O e-mail remetente exige verificar um domínio no Resend; `onboarding@resend.dev` é apenas para os casos de teste permitidos pelo serviço.
+- [ ] Fazer um pedido de teste no site publicado e confirmar que o e-mail chega à caixa da loja, que o link abre o painel com login e que os dados do pedido estão corretos. Se o aviso falhar, o pedido permanece no painel, mas não há reenvio automático.
 
 ### Backup e recuperação
 
@@ -284,7 +306,8 @@ O fluxo está publicado e habilitado no GitHub, mas a consulta ao repositório e
 
 ### Domínio, hospedagem e validação final
 
-- [ ] Escolher e contratar domínio e hospedagem permanentes. Antes de migrar para a Hostinger, confirmar que o plano escolhido suporta o servidor Python do projeto, tarefas e armazenamento necessários; manter o Supabase como banco se essa continuar sendo a arquitetura desejada.
+- [ ] Confirmar disponibilidade e comprar o domínio escolhido. A preferência atual é `estrelaconcept.com.br`; a extensão `.com` continua como alternativa se for mais importante manter o endereço inicialmente desejado.
+- [ ] Contratar a VPS Hostinger e concluir a migração do servidor Python. Os valores promocionais e o total cobrado devem ser conferidos no carrinho antes da compra; consulte a tabela acima como referência datada.
 - [ ] Configurar domínio, HTTPS, variáveis secretas, domínio de recuperação do Supabase e remetente de e-mail no ambiente escolhido. Não publicar credenciais em arquivos do site ou no GitHub.
 - [ ] Confirmar que o domínio aponta para o deploy esperado e que o serviço usa a versão mais recente da `main`.
 - [ ] Fazer uma validação final em celular e computador: navegação e filtros, galeria e upload, login e recuperação do painel, criação e atualização de pedidos, estoque e cancelamento, e-mail, WhatsApp e páginas de política.
