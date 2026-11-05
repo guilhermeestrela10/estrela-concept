@@ -68,8 +68,22 @@ async function refresh() {
     ]);
     state.products = products.products; state.orders = orders.orders; state.categories = categories.categories;
     renderMetrics(); renderProducts(); renderOrders(); renderCategories();
+    loadTopViewed();
     notice.textContent = "Painel atualizado."; notice.classList.remove("error");
   } catch(error) { showError(error); }
+}
+async function loadTopViewed() {
+  const list = document.querySelector("#top-viewed-list");
+  try {
+    const result = await api("/api/admin/analytics/top-products");
+    const products = result.products.map(view => ({ ...view, product: state.products.find(item => item.id === view.productId) }))
+      .filter(view => view.product?.active);
+    list.innerHTML = products.length
+      ? products.map(({ product, views }) => `<li><span>${escapeText(product.name)}</span><strong>${Number(views).toLocaleString("pt-BR")} visualizações</strong></li>`).join("")
+      : "<li>Ainda não há visualizações disponíveis.</li>";
+  } catch {
+    list.innerHTML = "<li>Visualizações indisponíveis no momento.</li>";
+  }
 }
 function renderMetrics() {
   const completedSalesCents = state.orders.reduce((sum, order) => sum + (order.status === "concluido" ? Math.round(order.total * 100) : 0), 0);

@@ -3,7 +3,7 @@ services:
     name: estrela-concept
     runtime: python
     plan: free
-    buildCommand: python -m compileall -q .
+    buildCommand: pip install -r requirements.txt && python -m compileall -q .
     startCommand: python server.py
     healthCheckPath: /api/status
     envVars:

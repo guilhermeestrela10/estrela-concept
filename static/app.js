@@ -82,6 +82,10 @@ function renderProducts() {
 function openProduct(id) {
   const product = state.products.find(item => item.id === id);
   if (!product) return;
+  fetch("/api/analytics/product-view", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ productId: id }), keepalive: true
+  }).catch(() => {});
   const variants = availableVariants(product);
   state.selectedSize = variants[0]?.size || "";
   state.selectedColor = variants.find(item => item.size === state.selectedSize)?.color || "";

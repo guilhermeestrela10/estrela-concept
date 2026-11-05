@@ -43,6 +43,7 @@ O site não processa pagamentos, não calcula frete e não confirma uma venda pa
 - Envio de até 10 imagens por produto em JPEG, PNG ou WebP (até 4 MB por arquivo), além de imagens por URL HTTPS.
 - Acompanhamento e atualização de status de pedidos, com atalho para chamar a cliente pelo WhatsApp.
 - Indicadores calculados a partir dos dados já carregados no painel para evitar uma consulta repetida ao banco.
+- Lista dos cinco produtos mais vistos, com contagem agregada no MongoDB Atlas; a loja funciona mesmo se essa integração estiver indisponível.
 
 ### Avisos por e-mail
 
@@ -59,10 +60,11 @@ flowchart LR
   API --> Banco[(Supabase Database)]
   API --> Fotos[Supabase Storage]
   Servidor --> Resend[Resend · aviso de pedido]
+  Servidor -. contagem agregada .-> MongoDB[(MongoDB Atlas)]
   Admin[Administradora em /admin] --> Servidor
 ```
 
-O navegador conversa com o servidor Python. O servidor usa uma Edge Function para acessar dados e operações administrativas do Supabase. A chave de serviço do Supabase permanece no ambiente Supabase; o token privado usado pelo servidor é configurado como segredo na hospedagem. As fotos do catálogo ficam no Supabase Storage.
+O navegador conversa com o servidor Python. O servidor usa uma Edge Function para acessar dados e operações administrativas do Supabase. A chave de serviço do Supabase permanece no ambiente Supabase; o token privado usado pelo servidor é configurado como segredo na hospedagem. As fotos do catálogo ficam no Supabase Storage. O MongoDB Atlas é complementar: guarda apenas um contador agregado por produto sempre que os detalhes são abertos. Pedidos, clientes, estoque e autenticação continuam no armazenamento atual. Sem Atlas configurado, vitrine e checkout seguem funcionando; apenas o resumo de visualizações fica indisponível.
 
 ## Tecnologias
 
@@ -73,10 +75,11 @@ O navegador conversa com o servidor Python. O servidor usa uma Edge Function par
 | Dados e autenticação | Supabase Database e Supabase Auth |
 | Fotos | Supabase Storage |
 | Operações protegidas | Supabase Edge Functions e PostgreSQL |
+| Métricas agregadas | MongoDB Atlas com PyMongo |
 | Hospedagem atual | Render |
 | Testes automatizados | `unittest` e SQLite temporário |
 
-Não há dependências Python externas para instalar.
+Para instalar a dependência opcional das métricas localmente, use `python -m pip install -r requirements.txt`. O Render também instala esse arquivo durante a compilação.
 
 ## Executar localmente
 
@@ -113,11 +116,19 @@ O serviço Render utiliza as seguintes variáveis de ambiente. Cadastre os valor
 | `RESEND_FROM_EMAIL` | Remetente autorizado no Resend; durante testes, o padrão é `Estrela Concept <onboarding@resend.dev>` |
 | `ORDER_NOTIFICATION_EMAIL` | Endereço que recebe os avisos de novos pedidos |
 | `ADMIN_PANEL_URL` | Link do painel incluído no e-mail; padrão atual: `https://estrela-concept.onrender.com/admin` |
+| `MONGODB_URI` | URI privada de conexão com o Atlas; configurar diretamente no Render, nunca no Git |
+| `MONGODB_DATABASE` | Banco das métricas; opcional, padrão `estrela_concept` |
 | `HOST` / `PORT` | Endereço e porta do servidor; o Render define a porta |
 
 No Render, use o Resend pela API HTTPS. O plano gratuito do Render bloqueia conexões SMTP de saída nas portas 25, 465 e 587, usadas pelo Gmail ([limitações oficiais](https://render.com/docs/free)). Crie uma chave no Resend e configure-a diretamente no painel do Render; nunca a grave no Git. Para usar um endereço próprio como remetente, verifique o domínio no Resend e cadastre o endereço em `RESEND_FROM_EMAIL`. O remetente de teste `onboarding@resend.dev` serve apenas para os testes permitidos pelo Resend. Ative também as notificações do Gmail no celular da loja.
 
 Fora do Render, o desenvolvimento local ainda pode usar `GMAIL_SMTP_USER` e `GMAIL_APP_PASSWORD` como alternativa. No Render, essas variáveis não substituem a chave do Resend.
+
+### MongoDB Atlas — visualizações agregadas
+
+Ao abrir os detalhes de um produto ativo, o servidor incrementa um único contador agregado identificado pelo ID do produto. O painel administrativo mostra até cinco produtos mais vistos. Não são armazenados nome, telefone, endereço IP, sessão ou registros individuais de navegação no MongoDB. Produtos, pedidos, clientes, estoque e autenticação continuam no banco atual. Se o Atlas estiver ausente ou temporariamente indisponível, as métricas ficam indisponíveis, mas a loja e o checkout continuam operando.
+
+Para ativar as métricas no Render, crie ou use um usuário de aplicação no Atlas com acesso somente de leitura e escrita ao banco das métricas, depois cadastre `MONGODB_URI` em **Environment** no serviço. A URI deve ser tratada como senha e não deve ser enviada por chat nem gravada em arquivos versionados. `MONGODB_DATABASE` é opcional. Restrinja o acesso de rede do Atlas às origens de saída do serviço sempre que possível. O banco e a coleção `product_views` são utilizados pela aplicação; não é necessário inserir documentos manualmente.
 
 ## Banco e arquivos do Supabase
 
@@ -181,7 +192,7 @@ Na pasta do projeto, execute:
 python -m unittest discover -s tests -v
 ```
 
-Os testes cobrem login e sessão, recuperação de senha no servidor, respostas de erro, validação de pedidos, estoque, upload, operações de catálogo no SQLite temporário e a montagem do envio pelo Resend. Eles não fazem compras reais, não enviam e-mails e não substituem a validação da implantação com o Supabase.
+Os testes existentes cobrem login e sessão, recuperação de senha no servidor, respostas de erro, validação de pedidos, estoque, upload, operações de catálogo no SQLite temporário e a montagem do envio pelo Resend. Eles não fazem compras reais, não enviam e-mails, não validam conexão com MongoDB Atlas e não substituem a validação da implantação com os serviços externos.
 
 ## Mapa dos arquivos
 
@@ -200,6 +211,8 @@ O projeto mantém os arquivos de entrada do serviço na raiz para que o Render e
 | `admin.html` | Interface administrativa restrita |
 | `server.py` | Servidor web, segurança HTTP, rotas e avisos por e-mail |
 | `store.py` | Comunicação com o Supabase e armazenamento SQLite para testes |
+| `mongodb_analytics.py` | Contadores agregados de visualizações no MongoDB Atlas |
+| `requirements.txt` | Dependência PyMongo usada pelas métricas opcionais |
 | `catalog.py` | Produtos de exemplo usados nos testes locais |
 | `static/app.js` | Catálogo, filtros, sacola e checkout |
 | `static/admin.js` | Login, catálogo, imagens e pedidos no painel |
@@ -238,6 +251,10 @@ O site está pronto para demonstração. Os itens abaixo precisam ser concluído
 - [ ] Implementar e validar a exclusão ou anonimização dos dados de pedidos em até 3 dias úteis após o encerramento do atendimento, mantendo tratativas abertas enquanto houver negociação ativa e preservando somente os registros que precisem ser mantidos por obrigação legal ou para exercício de direitos. Até a rotina existir, executar e registrar a revisão manualmente; considerar também a retenção de cópias em backups por até 30 dias.
 - [ ] Definir quem monitora o WhatsApp e o e-mail da loja e garantir confirmação imediata de recebimento e resposta às solicitações nos prazos informados na política.
 - [ ] Confirmar os dados públicos da loja, especialmente telefone/WhatsApp, e-mail de contato e nome da responsável.
+
+### Métricas do catálogo
+
+- [ ] Configurar `MONGODB_URI` em Environment no Render e confirmar no painel que as visualizações aparecem. Não salvar a URI no Git.
 
 ### E-mail de pedidos e atendimento
 

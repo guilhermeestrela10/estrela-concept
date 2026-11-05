@@ -22,6 +22,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from store import SupabaseStore
+from mongodb_analytics import ProductViewAnalytics
 
 ROOT = Path(__file__).resolve().parent
 HOST = os.environ.get("HOST", "127.0.0.1")
@@ -30,6 +31,7 @@ ADMIN_SETUP_TOKEN = os.environ.get("ESTRELA_ADMIN_SETUP_TOKEN", "")
 MAX_IMAGE_SIZE = 4 * 1024 * 1024
 IMAGE_TYPES = {"image/jpeg": b"\xff\xd8\xff", "image/png": b"\x89PNG\r\n\x1a\n", "image/webp": b"RIFF"}
 ADMIN_PANEL_URL = os.environ.get("ADMIN_PANEL_URL", "https://estrela-concept.onrender.com/admin")
+product_view_analytics = ProductViewAnalytics.from_env()
 
 
 def build_order_notification(order):
@@ -149,6 +151,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
     login_attempts = defaultdict(deque)
     recovery_attempts = defaultdict(deque)
     checkout_attempts = defaultdict(deque)
+    product_view_attempts = defaultdict(deque)
     checkout_global = deque()
     login_failures = deque()
 
@@ -313,6 +316,16 @@ class StoreHandler(SimpleHTTPRequestHandler):
         if path == "/api/admin/orders":
             self.send_json({"orders": self.admin_call("admin_orders") if isinstance(self.get_store(), SupabaseStore) else self.get_store().orders()})
             return
+        if path == "/api/admin/analytics/top-products":
+            if product_view_analytics is None:
+                self.send_json({"products": [], "available": False})
+                return
+            try:
+                self.send_json({"products": product_view_analytics.top_products(), "available": True})
+            except Exception as error:
+                logging.warning("Product view analytics unavailable: %s", type(error).__name__)
+                self.send_json({"products": [], "available": False})
+            return
         if path == "/admin":
             self.path = "/admin.html"
             super().do_GET()
@@ -357,6 +370,29 @@ class StoreHandler(SimpleHTTPRequestHandler):
     def do_POST(self) -> None:
         try:
             path = urlparse(self.path).path
+            if path == "/api/analytics/product-view":
+                if not self.origin_is_same():
+                    self.send_json({"error": "Origem da solicitação não permitida."}, 403)
+                    return
+                if self.rate_limited(self.attempts_for(self.__class__.product_view_attempts), 120, 60):
+                    self.send_json({"error": "Muitas solicitações. Tente novamente em instantes."}, 429)
+                    return
+                payload = self.read_json()
+                product_id = payload.get("productId")
+                if not isinstance(product_id, str) or not product_id.isascii() or not product_id.replace("-", "").replace("_", "").isalnum() or len(product_id) > 128:
+                    self.send_json({"error": "Produto inválido."}, 400)
+                    return
+                products = self.get_store().products()
+                if not any(product["id"] == product_id and product["active"] for product in products):
+                    self.send_json({"error": "Produto não encontrado."}, 404)
+                    return
+                if product_view_analytics is not None:
+                    try:
+                        product_view_analytics.record_view(product_id)
+                    except Exception as error:
+                        logging.warning("Product view analytics unavailable: %s", type(error).__name__)
+                self.send_json({"ok": True}, 202)
+                return
             if path == "/api/admin/upload-image":
                 if not self.origin_is_same():
                     self.send_json({"error": "Origem da solicitação não permitida."}, 403)
