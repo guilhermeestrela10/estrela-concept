@@ -287,7 +287,10 @@ class StoreHandler(SimpleHTTPRequestHandler):
     def _do_GET(self) -> None:
         path = urlparse(self.path).path
         if path == "/api/status":
-            self.send_json({"backend": "online" if isinstance(self.get_store(), SupabaseStore) else "local"})
+            self.send_json({
+                "backend": "online" if isinstance(self.get_store(), SupabaseStore) else "local",
+                "orderNotifications": email_notifications_configured(),
+            })
             return
         if path == "/api/admin/session":
             self.send_json({"configured": self.get_store().admin_configured(), "authenticated": bool(self.admin_session()),

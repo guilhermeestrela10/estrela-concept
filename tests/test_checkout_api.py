@@ -91,8 +91,15 @@ class CheckoutApiTests(unittest.TestCase):
             return response.status, json.load(response)
 
     def test_security_headers_are_set(self):
-        with urlopen(f"{self.base_url}/api/status") as response:
+        with patch.dict(os.environ, {
+            "RENDER": "1", "ORDER_NOTIFICATION_EMAIL": "", "RESEND_API_KEY": "",
+            "GMAIL_SMTP_USER": "", "GMAIL_APP_PASSWORD": "",
+        }):
+            with urlopen(f"{self.base_url}/api/status") as response:
+                status = json.load(response)
             headers = response.headers
+        self.assertEqual(status["backend"], "local")
+        self.assertFalse(status["orderNotifications"])
         self.assertEqual(headers["Cache-Control"], "no-store")
         self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
         self.assertEqual(headers["X-Frame-Options"], "DENY")

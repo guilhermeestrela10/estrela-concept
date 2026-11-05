@@ -254,16 +254,19 @@ O site está pronto para demonstração. Os itens abaixo precisam ser concluído
 
 ### Métricas do catálogo
 
-- [ ] Configurar `MONGODB_URI` em Environment no Render e confirmar no painel que as visualizações aparecem. Não salvar a URI no Git.
+- [x] Configurar `MONGODB_URI` em Environment no Render e confirmar no painel que as visualizações aparecem. A configuração foi confirmada e o painel exibiu contagens de visualização; a URI permanece privada no Render.
 
 ### E-mail de pedidos e atendimento
 
+- **Estado verificado:** o código diferencia configuração de aviso por e-mail e o painel informa quando ela não está ativa. O serviço precisa ter `RESEND_API_KEY` e `ORDER_NOTIFICATION_EMAIL`; a entrega real ainda não foi validada com uma mensagem de pedido em produção.
 - [ ] Criar uma chave de API no Resend e cadastrá-la como `RESEND_API_KEY` diretamente nas variáveis privadas do Render.
 - [ ] Definir `ORDER_NOTIFICATION_EMAIL` com o endereço que deve receber os pedidos.
 - [ ] Verificar um domínio de envio no Resend e configurar `RESEND_FROM_EMAIL` com um remetente autorizado. O endereço de demonstração `onboarding@resend.dev` tem limitações e não é substituto de um remetente da loja validado.
 - [ ] Salvar as variáveis e aguardar o deploy do Render. Fazer um pedido de teste e confirmar a chegada do e-mail, o link protegido para `/admin` e a conversa com a cliente pelo WhatsApp. O código não reenvia automaticamente avisos que falharem; confira o pedido no painel mesmo quando a mensagem de e-mail não chegar.
 
 ### Backup e recuperação
+
+O fluxo está publicado e habilitado no GitHub, mas a consulta ao repositório encontrou **zero execuções**. Portanto, não há confirmação de que os segredos estejam cadastrados nem de que exista um backup utilizável. O primeiro backup só estará validado depois de uma execução bem-sucedida e de um teste de restauração isolado.
 
 - [ ] Criar `SUPABASE_DB_URL` e `BACKUP_ENCRYPTION_PASSPHRASE` em **GitHub → Settings → Secrets and variables → Actions**. A frase deve ter pelo menos 24 caracteres, ser exclusiva e ficar guardada fora do GitHub.
 - [ ] Executar **Actions → Backup criptografado do Supabase → Run workflow** e confirmar que a execução terminou com sucesso e produziu o artefato criptografado.

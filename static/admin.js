@@ -59,6 +59,9 @@ fetch("/api/status").then(response => response.json()).then(status => {
   document.querySelector("#backend-footnote").textContent = online
     ? "Dados da loja conectados. Os produtos do catálogo são exemplos editáveis."
     : "Não foi possível conectar aos dados da loja. Tente novamente mais tarde.";
+  document.querySelector("#order-notification-status").textContent = status.orderNotifications === true
+    ? "Avisos de novos pedidos por e-mail estão configurados. Confira também o painel para acompanhar cada atendimento."
+    : "Os pedidos ficam registrados no painel; avisos por e-mail ainda não estão configurados neste serviço.";
 }).catch(() => {});
 async function refresh() {
   notice.textContent = "Carregando dados…";
