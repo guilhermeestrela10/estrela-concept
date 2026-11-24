@@ -342,3 +342,7 @@ O fluxo está publicado e habilitado no GitHub, mas a consulta ao repositório e
 - [ ] Confirmar que um pedido de teste não é confundido com venda paga: pagamento, frete, entrega e devolução são acertados diretamente com a cliente pelo WhatsApp.
 
 **Pronto para divulgação:** os dados e políticas reais estão revisados; e-mail e backup foram testados; as credenciais e acessos estão protegidos; domínio e hospedagem definitivos estão publicados; e a checagem final passou no endereço público. Até lá, use o site como demonstração e confira os pedidos no painel.
+
+## Navegação
+
+Consulte o [guia de estrutura](docs/estrutura-do-projeto.md) para localizar aplicação, páginas, arquivos estáticos, testes e integrações.
