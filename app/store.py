@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
-from catalog import PRODUCTS
+from .catalog import PRODUCTS
 
 STATUSES = {"novo", "em_andamento", "concluido", "cancelado"}
 

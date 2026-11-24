@@ -1,7 +1,7 @@
 # Estrela Concept
 
 <p align="center">
-  <img src="static/brand-horizontal.png" alt="Estrela Concept" width="420">
+  <img src="static/images/brand-horizontal.png" alt="Estrela Concept" width="420">
 </p>
 
 <p align="center"><strong>Seu estilo, seu brilho.</strong><br>Loja virtual de moda fitness com atendimento próximo pelo WhatsApp.</p>
@@ -151,7 +151,7 @@ Para ativar as métricas no Render, crie ou use um usuário de aplicação no At
 
 O projeto já utiliza o Supabase associado à loja. O arquivo `supabase/schema.sql` descreve tabelas, regras e operações do banco; não o execute novamente no projeto publicado sem verificar as migrações existentes. A função `supabase/functions/estrela-api/` implementa operações protegidas, como login administrativo, pedidos, atualização do catálogo e upload de imagens.
 
-O catálogo existente contém dados de demonstração. O arquivo `catalog.py` oferece dados usados no armazenamento temporário dos testes, não é o cadastro oficial dos produtos publicados.
+O catálogo existente contém dados de demonstração. O arquivo `app/catalog.py` oferece dados usados no armazenamento temporário dos testes, não é o cadastro oficial dos produtos publicados.
 
 ## Segurança e privacidade
 
@@ -214,37 +214,39 @@ Os testes existentes cobrem login e sessão, recuperação de senha no servidor,
 
 ## Mapa dos arquivos
 
-O projeto mantém os arquivos de entrada do serviço na raiz para que o Render encontre `server.py` e o servidor encontre as páginas e a pasta `static/`. Os diretórios estão separados por função:
-
-- `static/`: scripts da loja e do painel, estilos, logos e imagens.
-- `supabase/migrations/`: alterações incrementais do banco de dados.
-- `supabase/`: esquema do banco e Edge Function.
-- `tests/`: testes automatizados e arquivos de apoio.
-- `.github/workflows/`: automações do repositório, incluindo o backup.
-- Arquivos SQLite em `data/` e `graphify-out/`: dados locais e análises geradas, ignorados pelo Git.
+Os arquivos foram agrupados por responsabilidade. O arquivo `server.py` ficou na raiz como ponto de entrada compatível com o comando já configurado no Render; a implementação da aplicação fica em `app/`.
 
 | Caminho | Finalidade |
 | --- | --- |
-| `index.html` | Página principal da loja |
-| `assistente.html` | Página independente de atendimento assistido |
-| `politicas.html` | Política de privacidade, pedidos, entrega, defeitos e desistência online |
-| `admin.html` | Interface administrativa restrita |
-| `server.py` | Servidor web, segurança HTTP, rotas e avisos por e-mail |
-| `rag.py` | Preparação de trechos, embeddings, busca semântica e respostas fundamentadas |
-| `store.py` | Comunicação com o Supabase e armazenamento SQLite para testes |
-| `mongodb_analytics.py` | Contadores agregados de visualizações no MongoDB Atlas |
+| `app/server.py` | Servidor web, rotas, segurança HTTP e avisos por e-mail |
+| `app/store.py` | Comunicação com o Supabase e armazenamento SQLite para testes |
+| `app/rag.py` | Preparação de trechos, embeddings, busca semântica e respostas fundamentadas |
+| `app/mongodb_analytics.py` | Contadores agregados de visualizações no MongoDB Atlas |
+| `app/catalog.py` | Produtos de exemplo usados nos testes locais |
+| `server.py` | Ponto de entrada usado pelo comando de inicialização do Render |
+| `templates/index.html` | Página principal da loja |
+| `templates/assistente.html` | Página independente de atendimento assistido |
+| `templates/politicas.html` | Política de privacidade, pedidos, entrega, defeitos e desistência online |
+| `templates/admin.html` | Interface administrativa restrita |
+| `static/` | Arquivos públicos agrupados em `css/`, `js/` e `images/` |
 | `requirements.txt` | Dependência PyMongo usada pelas métricas opcionais |
-| `catalog.py` | Produtos de exemplo usados nos testes locais |
-| `static/app.js` | Catálogo, filtros, sacola e checkout |
-| `static/assistente.js` | Conversa e apresentação das fontes consultadas |
-| `static/admin.js` | Login, catálogo, imagens e pedidos no painel |
-| `static/styles.css` | Aparência responsiva |
-| `static/brand-horizontal.png` | Logo horizontal da marca usada neste README |
-| `supabase/schema.sql` | Definição do esquema e das operações SQL |
-| `supabase/functions/estrela-api/index.ts` | API protegida no Supabase |
+| `static/js/app.js` | Catálogo, filtros, sacola e checkout |
+| `static/js/assistente.js` | Conversa e apresentação das fontes consultadas |
+| `static/js/admin.js` | Login, catálogo, imagens e pedidos no painel |
+| `static/css/styles.css` | Aparência responsiva |
+| `static/images/` | Logos, ícone e imagens públicas da loja |
+| `supabase/schema.sql` | Esquema completo de referência do banco |
+| `supabase/migrations/` | Alterações incrementais aplicadas ao banco |
+| `supabase/functions/estrela-api/` | Operações protegidas executadas no Supabase |
+| `tests/` | Testes automatizados da aplicação |
+| `tests/fixtures/` | Arquivos auxiliares usados em cenários de teste |
+| `.github/workflows/` | Verificações do projeto e fluxo de backup criptografado |
+| `docs/estrutura-do-projeto.md` | Guia rápido para localizar e alterar partes do sistema |
 | `render.yaml` | Configuração do serviço Render |
-| `tests/` | Testes automatizados |
-| `.github/workflows/supabase-backup.yml` | Fluxo semanal e manual para backup criptografado do banco |
+| `.env.example` | Nomes das variáveis de exemplo, sem valores secretos |
+| `.gitignore` | Arquivos locais e segredos que não devem ser enviados ao Git |
+
+Dados locais ignorados, como arquivos SQLite em `data/` e relatórios gerados em `graphify-out/`, não fazem parte do repositório.
 
 ## Publicação e domínio
 

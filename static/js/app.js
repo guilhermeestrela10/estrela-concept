@@ -23,9 +23,9 @@ function escapeHTML(value) {
 function safeImageUrl(value) {
   try {
     const url = new URL(value, window.location.origin);
-    return url.protocol === "https:" || url.origin === window.location.origin ? escapeHTML(url.href) : "/static/favicon.svg";
+    return url.protocol === "https:" || url.origin === window.location.origin ? escapeHTML(url.href) : "/static/images/favicon.svg";
   } catch {
-    return "/static/favicon.svg";
+    return "/static/images/favicon.svg";
   }
 }
 const state = { products: [], cart: loadCart(), selectedSize: "", selectedColor: "" };

@@ -12,9 +12,9 @@ from http.server import ThreadingHTTPServer
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from server import StoreHandler, build_order_notification
-import server
-from store import Store, SupabaseStore
+from app.server import StoreHandler, build_order_notification
+from app import server
+from app.store import Store, SupabaseStore
 
 
 class IsolatedStoreHandler(StoreHandler):
@@ -108,7 +108,7 @@ class CheckoutApiTests(unittest.TestCase):
         self.assertEqual(headers["Permissions-Policy"], "camera=(), microphone=(), geolocation=()")
 
     def test_static_assets_can_be_cached_briefly(self):
-        with urlopen(f"{self.base_url}/static/styles.css") as response:
+        with urlopen(f"{self.base_url}/static/css/styles.css") as response:
             self.assertEqual(response.headers["Cache-Control"], "public, max-age=300")
 
     def test_admin_forms_do_not_prefill_the_username(self):
@@ -135,7 +135,7 @@ class CheckoutApiTests(unittest.TestCase):
         self.assertIn("conteúdo", result["error"])
 
     def test_image_upload_rejects_oversized_files(self):
-        from server import MAX_IMAGE_SIZE, validate_image
+        from app.server import MAX_IMAGE_SIZE, validate_image
         with self.assertRaises(OverflowError):
             validate_image("image/jpeg", b"\xff\xd8\xff" + b"0" * MAX_IMAGE_SIZE)
 
@@ -233,7 +233,7 @@ class CheckoutApiTests(unittest.TestCase):
             "RENDER": "true", "RESEND_API_KEY": "re_test_key",
             "RESEND_FROM_EMAIL": "Estrela Concept <onboarding@resend.dev>",
             "ORDER_NOTIFICATION_EMAIL": "estrelaconcept0@gmail.com",
-        }, clear=True), patch("server.urllib.request.urlopen", return_value=Response()) as post:
+        }, clear=True), patch("app.server.urllib.request.urlopen", return_value=Response()) as post:
             self.assertTrue(server.send_order_notification(order))
 
         request = post.call_args.args[0]
@@ -251,7 +251,7 @@ class CheckoutApiTests(unittest.TestCase):
         with patch.dict(os.environ, {
             "RENDER": "true", "GMAIL_SMTP_USER": "store@example.com",
             "GMAIL_APP_PASSWORD": "test-password", "ORDER_NOTIFICATION_EMAIL": "store@example.com",
-        }, clear=True), patch("server.smtplib.SMTP_SSL") as smtp:
+        }, clear=True), patch("app.server.smtplib.SMTP_SSL") as smtp:
             self.assertFalse(server.send_order_notification(order))
         smtp.assert_not_called()
 
@@ -293,7 +293,7 @@ class CheckoutApiTests(unittest.TestCase):
         self.assertIn("a revisão e a exclusão devem ser feitas manualmente", page)
         for provider in ("Supabase", "Render", "Resend", "Visual Studio Code"):
             self.assertNotIn(provider, page)
-        with urlopen(f"{self.base_url}/static/admin.js", timeout=2) as response:
+        with urlopen(f"{self.base_url}/static/js/admin.js", timeout=2) as response:
             dashboard_script = response.read().decode("utf-8")
         for provider in ("Supabase", "Render", "Resend", "Visual Studio Code"):
             self.assertNotIn(provider, dashboard_script)

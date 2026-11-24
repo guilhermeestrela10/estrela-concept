@@ -132,7 +132,7 @@ function renderCategories() {
 function renderProductImages() {
   const list = document.querySelector("#product-image-list");
   list.innerHTML = imageItems.map((item, index) => {
-    const source = item.kind === "file" ? item.preview : /^https:\/\//i.test(item.url) ? item.url : "/static/favicon.svg";
+    const source = item.kind === "file" ? item.preview : /^https:\/\//i.test(item.url) ? item.url : "/static/images/favicon.svg";
     const detail = item.kind === "file" ? item.file.name : item.kind === "existing" ? "Foto cadastrada" : "URL adicionada";
     return `<article class="product-image-item"><img src="${escapeText(source)}" alt="Prévia da foto ${index + 1}"><div><strong>${index === 0 ? "Capa" : `Foto ${index + 1}`}</strong><small>${escapeText(detail)}</small></div><button type="button" data-image-up="${index}" aria-label="Mover foto ${index + 1} para cima" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" data-image-down="${index}" aria-label="Mover foto ${index + 1} para baixo" ${index === imageItems.length - 1 ? "disabled" : ""}>↓</button><button type="button" data-image-remove="${index}" aria-label="Remover foto ${index + 1}">×</button></article>`;
   }).join("") || `<p class="image-list-empty">Nenhuma foto adicionada ainda.</p>`;
