@@ -451,7 +451,9 @@ class StoreHandler(SimpleHTTPRequestHandler):
                 try:
                     products = self.admin_call("products", include_inactive=True) if isinstance(self.get_store(), SupabaseStore) else self.get_store().products(include_inactive=True)
                     active_products = [product for product in products if product.get("active")]
-                    indexed = RagService(self.get_store()).reindex(active_products, ROOT / "politicas.html")
+                    indexed = RagService(self.get_store()).reindex(
+                        active_products, ROOT / "politicas.html", session_token=self.current_admin_token
+                    )
                     self.send_json({"ok": True, "indexed": indexed})
                 except RuntimeError as error:
                     self.send_json({"error": str(error)}, 503)

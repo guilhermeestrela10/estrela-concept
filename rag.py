@@ -134,14 +134,14 @@ class RagService:
             raise RuntimeError("O serviço de busca retornou um vetor inválido.")
         return vector
 
-    def reindex(self, products, policy_path):
+    def reindex(self, products, policy_path, session_token=None):
         if not self.configured:
             raise RuntimeError("O serviço de respostas ainda precisa ser configurado.")
         chunks = build_documents(products, policy_path)
         with ThreadPoolExecutor(max_workers=4) as pool:
             embeddings = list(pool.map(lambda chunk: self._embed(chunk["content"], "RETRIEVAL_DOCUMENT"), chunks))
         entries = [{**chunk, "embedding": embedding} for chunk, embedding in zip(chunks, embeddings)]
-        return self.store.rag_replace_chunks(entries)
+        return self.store.rag_replace_chunks(entries, session_token=session_token)
 
     def answer(self, question: str) -> dict:
         if not self.configured:
