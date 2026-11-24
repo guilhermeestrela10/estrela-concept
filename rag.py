@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import urllib.error
@@ -120,6 +121,9 @@ class RagService:
         try:
             with urllib.request.urlopen(request, timeout=25) as response:
                 return json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            logging.warning("Gemini API returned HTTP %s", error.code)
+            raise RuntimeError("O assistente não conseguiu acessar o serviço de respostas.") from error
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
             raise RuntimeError("O assistente não conseguiu acessar o serviço de respostas.") from error
 
