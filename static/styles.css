@@ -40,6 +40,9 @@ a { color: inherit; text-decoration: none; }
 .button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 .button-dark { background: var(--ink); color: white; }
 .button-dark:hover { background: #44383b; }
+.hero-actions { display: grid; justify-items: start; gap: 10px; }
+.button-assistant { min-height: 44px; padding: 0 17px; border: 1px solid #d9b7bd; background: #fffdfa; color: var(--pink-dark); }
+.button-assistant:hover { background: #faeeee; }
 .hero-note { display: flex; align-items: center; gap: 11px; margin-top: 48px; }
 .hero-note > span { color: var(--pink-dark); font-size: 24px; }
 .hero-note p { margin: 0; font: 500 13px/1.35 var(--serif); }
