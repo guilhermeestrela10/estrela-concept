@@ -140,8 +140,8 @@ class RagService:
                         "systemInstruction": {"parts": [{"text": body["system_instruction"]}]},
                         "contents": [{"role": "user", "parts": [{"text": body["input"]}]}],
                         "generationConfig": {
-                            "temperature": generation.get("temperature", 0.2),
-                            "maxOutputTokens": generation.get("max_output_tokens", 220),
+                            "thinkingConfig": {"thinkingLevel": "MINIMAL"},
+                            "maxOutputTokens": generation.get("max_output_tokens", 500),
                         },
                     }
                     fallback_url = (
@@ -210,7 +210,11 @@ class RagService:
                 "Não solicite dados pessoais nem trate pedidos, clientes, contas ou informações privadas. Responda em até 120 palavras."
             ),
             "input": user_content,
-            "generation_config": {"temperature": 0.2, "max_output_tokens": 220},
+            "generation_config": {
+                "temperature": 0.2,
+                "thinking_level": "low",
+                "max_output_tokens": 500,
+            },
         }, fallback_model="gemini-3.6-flash")
         try:
             answer = result["output_text"].strip()
