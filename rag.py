@@ -122,14 +122,33 @@ class RagService:
         for attempt in range(2):
             try:
                 with urllib.request.urlopen(request, timeout=25) as response:
-                    return json.loads(response.read())
+                    result = json.loads(response.read())
+                    if url.endswith(":generateContent"):
+                        candidates = result.get("candidates") or []
+                        if not candidates:
+                            raise RuntimeError("O serviço de respostas não retornou conteúdo.")
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        return {"output_text": "".join(part.get("text", "") for part in parts)}
+                    return result
             except urllib.error.HTTPError as error:
                 if attempt == 0 and error.code in {500, 502, 503, 504}:
                     time.sleep(0.5)
                     continue
                 if error.code == 503 and fallback_model:
-                    fallback_body = {**body, "model": fallback_model}
-                    return self._google(url, fallback_body)
+                    generation = body.get("generation_config", {})
+                    fallback_body = {
+                        "systemInstruction": {"parts": [{"text": body["system_instruction"]}]},
+                        "contents": [{"role": "user", "parts": [{"text": body["input"]}]}],
+                        "generationConfig": {
+                            "temperature": generation.get("temperature", 0.2),
+                            "maxOutputTokens": generation.get("max_output_tokens", 220),
+                        },
+                    }
+                    fallback_url = (
+                        "https://generativelanguage.googleapis.com/v1beta/"
+                        f"models/{fallback_model}:generateContent"
+                    )
+                    return self._google(fallback_url, fallback_body)
                 logging.warning("Gemini API returned HTTP %s", error.code)
                 raise RuntimeError("O assistente não conseguiu acessar o serviço de respostas.") from error
             except (urllib.error.URLError, TimeoutError) as error:
