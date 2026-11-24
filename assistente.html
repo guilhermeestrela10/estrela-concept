@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#DBA2AB">
+  <meta name="description" content="Tire dúvidas sobre produtos, entrega e atendimento da Estrela Concept.">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Atendimento · Estrela Concept</title>
+  <link rel="icon" type="image/png" href="/static/brand-mark.png">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/assistente.js" defer></script>
+</head>
+<body class="assistant-page">
+  <header class="assistant-header">
+    <a class="brand" href="/" aria-label="Estrela Concept — início"><img class="brand-logo" src="/static/brand-horizontal.png" alt="Estrela Concept"></a>
+    <a href="/">Voltar à loja</a>
+  </header>
+  <main class="assistant-main">
+    <section class="assistant-intro" aria-labelledby="assistant-title">
+      <p class="eyebrow">ESTRELA CONCEPT · ATENDIMENTO</p>
+      <h1 id="assistant-title">Como podemos <em>ajudar?</em></h1>
+      <p>Converse com a assistente para saber mais sobre as peças, disponibilidade e informações da loja.</p>
+    </section>
+    <section class="assistant-chat" aria-label="Conversa com a assistente">
+      <div class="assistant-messages" id="assistant-messages" aria-live="polite" aria-relevant="additions">
+        <div class="assistant-message">Olá! Posso ajudar com informações públicas sobre os produtos, as opções do catálogo e as políticas da loja.</div>
+      </div>
+      <div class="assistant-suggestions" aria-label="Sugestões de perguntas">
+        <button type="button">Quais peças estão disponíveis?</button>
+        <button type="button">Como funciona a entrega?</button>
+        <button type="button">Como faço para trocar uma peça com defeito?</button>
+      </div>
+      <form class="assistant-form" id="assistant-form">
+        <label class="sr-only" for="assistant-question">Digite sua pergunta</label>
+        <textarea id="assistant-question" name="question" maxlength="500" rows="2" placeholder="Escreva sua pergunta…" required></textarea>
+        <button type="submit" id="assistant-submit">Enviar pergunta</button>
+      </form>
+      <p class="assistant-status" id="assistant-status" role="status">Preparando o atendimento…</p>
+    </section>
+    <footer class="assistant-footer">
+      <span>As perguntas são processadas por um serviço externo. Não envie dados pessoais ou número de pedido.</span>
+      <a href="https://wa.me/5586999269836" target="_blank" rel="noopener noreferrer">Falar diretamente pelo WhatsApp ↗</a>
+    </footer>
+  </main>
+</body>
+</html>

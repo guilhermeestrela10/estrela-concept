@@ -43,6 +43,10 @@ class SupabaseStore:
     def admin_products(self, session_token): return self._call("admin_products", sessionToken=session_token)["products"]
     def admin_categories(self, session_token): return self._call("admin_categories", sessionToken=session_token)["categories"]
     def admin_orders(self, session_token): return self._call("orders", sessionToken=session_token)["orders"]
+    def rag_replace_chunks(self, chunks, session_token=None):
+        return self._call("rag_replace_chunks", chunks=chunks, sessionToken=session_token)["count"]
+    def rag_search(self, embedding, limit=5, min_similarity=0.48):
+        return self._call("rag_search", embedding=embedding, limit=limit, minSimilarity=min_similarity)["results"]
 
     @classmethod
     def configured(cls):

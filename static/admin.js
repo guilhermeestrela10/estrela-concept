@@ -62,6 +62,12 @@ fetch("/api/status").then(response => response.json()).then(status => {
   document.querySelector("#order-notification-status").textContent = status.orderNotifications === true
     ? "Avisos de novos pedidos por e-mail estão configurados. Confira também o painel para acompanhar cada atendimento."
     : "Os pedidos ficam registrados no painel; avisos por e-mail ainda não estão configurados neste serviço.";
+  const ragButton = document.querySelector("#rag-reindex");
+  const ragStatus = document.querySelector("#rag-admin-status");
+  ragButton.disabled = status.assistantConfigured !== true;
+  ragStatus.textContent = status.assistantConfigured === true
+    ? "As respostas usam as informações públicas dos produtos e das políticas. Atualize a base após mudanças importantes."
+    : "O assistente está pronto para receber a configuração de respostas. A loja e o painel continuam funcionando normalmente.";
 }).catch(() => {});
 async function refresh() {
   notice.textContent = "Carregando dados…";
@@ -166,6 +172,20 @@ function editProduct(product) {
   document.querySelector("#product-dialog").showModal();
 }
 document.querySelector("#refresh").addEventListener("click", refresh);
+document.querySelector("#rag-reindex").addEventListener("click", async event => {
+  const button = event.currentTarget;
+  const status = document.querySelector("#rag-admin-status");
+  button.disabled = true;
+  status.textContent = "Atualizando as informações da loja…";
+  try {
+    const result = await api("/api/admin/assistant/reindex", { method:"POST", body:"{}" });
+    status.textContent = `Base atualizada com ${Number(result.indexed).toLocaleString("pt-BR")} trechos de produtos e políticas.`;
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+});
 document.querySelector("#auth-form").addEventListener("submit", async event => {
   event.preventDefault();
   const form = event.currentTarget;

@@ -23,6 +23,7 @@ from urllib.parse import unquote, urlparse
 
 from store import SupabaseStore
 from mongodb_analytics import ProductViewAnalytics
+from rag import RagService, SensitiveQuestionError
 
 ROOT = Path(__file__).resolve().parent
 HOST = os.environ.get("HOST", "127.0.0.1")
@@ -152,6 +153,9 @@ class StoreHandler(SimpleHTTPRequestHandler):
     recovery_attempts = defaultdict(deque)
     checkout_attempts = defaultdict(deque)
     product_view_attempts = defaultdict(deque)
+    assistant_attempts = defaultdict(deque)
+    assistant_global_attempts = deque()
+    assistant_reindex_attempts = deque()
     checkout_global = deque()
     login_failures = deque()
 
@@ -290,6 +294,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
             self.send_json({
                 "backend": "online" if isinstance(self.get_store(), SupabaseStore) else "local",
                 "orderNotifications": email_notifications_configured(),
+                "assistantConfigured": bool(os.environ.get("GEMINI_API_KEY", "").strip()),
             })
             return
         if path == "/api/admin/session":
@@ -333,6 +338,10 @@ class StoreHandler(SimpleHTTPRequestHandler):
             self.path = "/admin.html"
             super().do_GET()
             return
+        if path == "/assistente":
+            self.path = "/assistente.html"
+            super().do_GET()
+            return
         if path == "/politicas":
             self.path = "/politicas.html"
         if path.startswith("/api/"):
@@ -342,7 +351,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
             self.path = "/index.html"
         static_path = unquote(urlparse(self.path).path)
         if "\\" in static_path or ".." in Path(static_path).parts or not (
-            static_path in {"/index.html", "/admin.html", "/politicas.html", "/favicon.ico"}
+            static_path in {"/index.html", "/admin.html", "/assistente.html", "/politicas.html", "/favicon.ico"}
             or static_path.startswith("/static/")
         ):
             self.send_error(404)
@@ -412,6 +421,40 @@ class StoreHandler(SimpleHTTPRequestHandler):
             payload = self.read_json()
             if not self.origin_is_same():
                 self.send_json({"error": "Origem da solicitação não permitida."}, 403)
+                return
+            if path == "/api/assistant/chat":
+                per_ip = self.attempts_for(self.__class__.assistant_attempts)
+                if self.rate_limited(per_ip, 8, 60) or self.rate_limited(self.__class__.assistant_global_attempts, 60, 3600):
+                    self.send_json({"error": "Você chegou ao limite de consultas por enquanto. Tente novamente em alguns minutos."}, 429)
+                    return
+                question = payload.get("question")
+                if not isinstance(question, str) or not 1 <= len(question.strip()) <= 500:
+                    self.send_json({"error": "Escreva uma pergunta de até 500 caracteres."}, 400)
+                    return
+                try:
+                    self.send_json(RagService(self.get_store()).answer(question.strip()))
+                except SensitiveQuestionError as error:
+                    self.send_json({"error": str(error)}, 400)
+                except ValueError:
+                    logging.warning("Assistant data service unavailable")
+                    self.send_json({"error": "O atendimento assistido está temporariamente indisponível. Fale com a equipe pelo WhatsApp."}, 503)
+                except RuntimeError as error:
+                    logging.warning("Assistant request unavailable: %s", str(error)[:120])
+                    self.send_json({"error": str(error)}, 503)
+                return
+            if path == "/api/admin/assistant/reindex":
+                if not self.require_admin():
+                    return
+                if self.rate_limited(self.__class__.assistant_reindex_attempts, 1, 300):
+                    self.send_json({"error": "A base foi atualizada há pouco. Aguarde alguns minutos antes de repetir."}, 429)
+                    return
+                try:
+                    products = self.admin_call("products", include_inactive=True) if isinstance(self.get_store(), SupabaseStore) else self.get_store().products(include_inactive=True)
+                    active_products = [product for product in products if product.get("active")]
+                    indexed = RagService(self.get_store()).reindex(active_products, ROOT / "politicas.html")
+                    self.send_json({"ok": True, "indexed": indexed})
+                except RuntimeError as error:
+                    self.send_json({"error": str(error)}, 503)
                 return
             if path == "/api/admin/password-recovery":
                 store = self.get_store()

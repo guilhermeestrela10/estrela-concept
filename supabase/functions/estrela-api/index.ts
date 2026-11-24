@@ -207,7 +207,7 @@ async function handle(action: string, payload: any) {
     }
     return { ok: true };
   }
-  const privateActions = new Set(["admin_products", "admin_categories", "orders", "summary", "save_product", "upload_product_image",
+  const privateActions = new Set(["admin_products", "admin_categories", "orders", "summary", "save_product", "upload_product_image", "rag_replace_chunks",
     "save_category", "set_product_active", "update_order_status"]);
   if (privateActions.has(action) && !await validSession(payload.sessionToken)) throw new ApiError("Entre no painel para continuar.", 401);
   if (action === "products") return { products: await products(false) };
@@ -250,6 +250,33 @@ async function handle(action: string, payload: any) {
   if (action === "update_order_status") {
     await db("rpc/admin_update_order_status", "POST", { p_order_id: payload.id, p_status: payload.status });
     return { ok: true };
+  }
+  if (action === "rag_replace_chunks") {
+    const chunks = payload.chunks;
+    if (!Array.isArray(chunks) || chunks.length < 1 || chunks.length > 500
+        || chunks.some((item: any) => !item || typeof item.source !== "string" || item.source.length < 1 || item.source.length > 120
+          || typeof item.content !== "string" || item.content.length < 1 || item.content.length > 2000
+          || !Array.isArray(item.embedding) || item.embedding.length !== 768
+          || item.embedding.some((value: any) => typeof value !== "number" || !Number.isFinite(value)))) {
+      throw new ApiError("A base de informações enviada é inválida.", 400);
+    }
+    const count = await db("rpc/replace_rag_chunks", "POST", { p_chunks: chunks });
+    return { count };
+  }
+  if (action === "rag_search") {
+    const embedding = payload.embedding;
+    const limit = Number(payload.limit);
+    const minSimilarity = Number(payload.minSimilarity);
+    if (!Array.isArray(embedding) || embedding.length !== 768
+        || embedding.some((value: any) => typeof value !== "number" || !Number.isFinite(value))
+        || !Number.isInteger(limit) || limit < 1 || limit > 5
+        || !Number.isFinite(minSimilarity) || minSimilarity < 0 || minSimilarity > 1) {
+      throw new ApiError("A consulta semântica é inválida.", 400);
+    }
+    const results = await db("rpc/search_rag_chunks", "POST", {
+      p_query_embedding: `[${embedding.join(",")}]`, p_match_count: limit, p_min_similarity: minSimilarity,
+    });
+    return { results };
   }
   throw new ApiError("Ação não encontrada.", 404);
 }

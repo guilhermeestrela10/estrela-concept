@@ -8,6 +8,8 @@
 
 <p align="center">
   <a href="https://estrela-concept.onrender.com/">Abrir a loja</a> ·
+  <a href="https://estrela-concept.onrender.com/assistente">Atendimento assistido</a> ·
+  <a href="https://estrela-concept.onrender.com/admin">Painel administrativo</a> ·
   <a href="https://github.com/guilhermeestrela10/estrela-concept">Repositório no GitHub</a>
 </p>
 
@@ -49,6 +51,17 @@ O site não processa pagamentos, não calcula frete e não confirma uma venda pa
 
 Quando o pedido é gravado, o servidor tenta enviar uma notificação para o e-mail da loja pela API HTTPS do Resend. A mensagem mostra os itens, o total e um botão para abrir o painel. O telefone da cliente fica somente no painel, que exige login. Uma falha no e-mail não cancela o pedido; no momento, avisos com falha não são reenviados automaticamente. O pedido continua disponível no painel.
 
+### Assistente da loja
+
+- Página independente em `/assistente`, sem exposição na navegação principal.
+- Busca semântica em trechos do catálogo ativo e das políticas públicas; as fontes consultadas aparecem junto da resposta.
+- Os trechos e vetores ficam numa tabela privada do PostgreSQL com pgvector. A página pública não acessa o banco diretamente.
+- A administradora atualiza a base pelo painel depois de mudanças importantes. Dados de clientes e pedidos não são indexados.
+- O campo recusa formatos comuns de telefone, e-mail, documento e identificador de pedido; a página também orienta a cliente a não digitar dados pessoais. O texto da pergunta é encaminhado ao serviço de respostas, então a política já explica esse uso.
+- Perguntas curtas, limite de consultas e resposta alternativa pelo WhatsApp ajudam a controlar custos e a evitar informações inventadas.
+- A política pública informa que a localização do processamento externo e o mecanismo de transferência internacional ainda devem ser confirmados antes do uso comercial. As condições de uso de dados do serviço de respostas variam conforme o plano; confira a [página oficial de uso e preços](https://ai.google.dev/gemini-api/docs/pricing) ao configurar a chave.
+- **Ativação pendente:** cadastre `GEMINI_API_KEY` nas variáveis do Render. Sem essa chave, a página informa que o atendimento assistido está sendo preparado; loja, sacola, pedidos e painel continuam operando normalmente.
+
 ## Como funciona
 
 ```mermaid
@@ -61,6 +74,8 @@ flowchart LR
   API --> Fotos[Supabase Storage]
   Servidor --> Resend[Resend · aviso de pedido]
   Servidor -. contagem agregada .-> MongoDB[(MongoDB Atlas)]
+  Servidor --> Vetores[(pgvector · conhecimento público)]
+  Servidor --> Assistente[Atendimento assistido]
   Admin[Administradora em /admin] --> Servidor
 ```
 
@@ -76,6 +91,7 @@ O navegador conversa com o servidor Python. O servidor usa uma Edge Function par
 | Fotos | Supabase Storage |
 | Operações protegidas | Supabase Edge Functions e PostgreSQL |
 | Métricas agregadas | MongoDB Atlas com PyMongo |
+| Busca semântica e respostas | PostgreSQL com pgvector e serviço de geração de texto |
 | Hospedagem atual | Render |
 | Testes automatizados | `unittest` e SQLite temporário |
 
@@ -114,6 +130,7 @@ O serviço Render utiliza as seguintes variáveis de ambiente. Cadastre os valor
 | `ESTRELA_EDGE_API_TOKEN` | Segredo para o servidor chamar a Edge Function |
 | `RESEND_API_KEY` | Chave secreta usada para enviar notificações pelo Resend |
 | `RESEND_FROM_EMAIL` | Remetente autorizado no Resend; durante testes, o padrão é `Estrela Concept <onboarding@resend.dev>` |
+| `GEMINI_API_KEY` | Chave privada para criar embeddings e gerar respostas fundamentadas do assistente |
 | `ORDER_NOTIFICATION_EMAIL` | Endereço que recebe os avisos de novos pedidos |
 | `ADMIN_PANEL_URL` | Link do painel incluído no e-mail; padrão atual: `https://estrela-concept.onrender.com/admin` |
 | `MONGODB_URI` | URI privada de conexão com o Atlas; configurar diretamente no Render, nunca no Git |
@@ -160,6 +177,7 @@ Estas configurações são privadas e devem existir apenas no serviço que as us
 | `ESTRELA_EDGE_API_TOKEN` | Render; no computador local, arquivo fora do projeto em `%LOCALAPPDATA%\Estrela Concept\edge_api.key` |
 | `SUPABASE_SECRET_KEYS` ou `SUPABASE_SERVICE_ROLE_KEY` | Segredos do runtime da Edge Function no Supabase |
 | `RESEND_API_KEY` | Variáveis privadas do Render |
+| `GEMINI_API_KEY` | Variável privada do Render; não deve ser colocada no Git nem no navegador |
 | `GMAIL_APP_PASSWORD` | Apenas no ambiente local, se usar o SMTP de desenvolvimento |
 | `SUPABASE_DB_URL` e `BACKUP_ENCRYPTION_PASSPHRASE` | GitHub Actions Secrets; usados pelo backup criptografado |
 
@@ -199,6 +217,7 @@ Os testes existentes cobrem login e sessão, recuperação de senha no servidor,
 O projeto mantém os arquivos de entrada do serviço na raiz para que o Render encontre `server.py` e o servidor encontre as páginas e a pasta `static/`. Os diretórios estão separados por função:
 
 - `static/`: scripts da loja e do painel, estilos, logos e imagens.
+- `supabase/migrations/`: alterações incrementais do banco de dados.
 - `supabase/`: esquema do banco e Edge Function.
 - `tests/`: testes automatizados e arquivos de apoio.
 - `.github/workflows/`: automações do repositório, incluindo o backup.
@@ -207,14 +226,17 @@ O projeto mantém os arquivos de entrada do serviço na raiz para que o Render e
 | Caminho | Finalidade |
 | --- | --- |
 | `index.html` | Página principal da loja |
+| `assistente.html` | Página independente de atendimento assistido |
 | `politicas.html` | Política de privacidade, pedidos, entrega, defeitos e desistência online |
 | `admin.html` | Interface administrativa restrita |
 | `server.py` | Servidor web, segurança HTTP, rotas e avisos por e-mail |
+| `rag.py` | Preparação de trechos, embeddings, busca semântica e respostas fundamentadas |
 | `store.py` | Comunicação com o Supabase e armazenamento SQLite para testes |
 | `mongodb_analytics.py` | Contadores agregados de visualizações no MongoDB Atlas |
 | `requirements.txt` | Dependência PyMongo usada pelas métricas opcionais |
 | `catalog.py` | Produtos de exemplo usados nos testes locais |
 | `static/app.js` | Catálogo, filtros, sacola e checkout |
+| `static/assistente.js` | Conversa e apresentação das fontes consultadas |
 | `static/admin.js` | Login, catálogo, imagens e pedidos no painel |
 | `static/styles.css` | Aparência responsiva |
 | `static/brand-horizontal.png` | Logo horizontal da marca usada neste README |
@@ -230,7 +252,7 @@ O site está publicado no Render para demonstração em <https://estrela-concept
 
 ### Plano escolhido para a publicação definitiva
 
-A opção escolhida é **Hostinger VPS**, porque a aplicação roda em Python. A hospedagem compartilhada comum não é o destino planejado. A preferência atual de domínio é **`estrelaconcept.com.br`**, por ter a renovação mais barata entre as duas opções comparadas; confirme disponibilidade e preço no carrinho antes de pagar. Se a prioridade voltar a ser o endereço exato `estrelaconcept.com`, será preciso escolher essa extensão e aceitar a renovação maior.
+A opção escolhida é **Hostinger VPS**, porque a aplicação roda em Python. A hospedagem compartilhada comum não é o destino planejado. A preferência atual de domínio é **`estrelaconcept.com`**, como solicitado pela responsável; confirme disponibilidade e preço no carrinho antes de pagar.
 
 Valores promocionais consultados em **5 de novembro de 2026** (podem mudar):
 
@@ -259,12 +281,16 @@ O site está pronto para demonstração. Os itens abaixo precisam ser concluído
 ### Decisões e configurações já concluídas
 
 - [x] Definir a hospedagem definitiva: Hostinger VPS, adequada à aplicação Python.
-- [x] Escolher como preferência atual o domínio `.com.br`, por ter renovação menor na comparação consultada. A compra e a disponibilidade ainda precisam ser confirmadas.
+- [x] Escolher como preferência atual o domínio `estrelaconcept.com`. A compra e a disponibilidade ainda precisam ser confirmadas.
 - [x] Conectar as métricas de visualização ao MongoDB Atlas e confirmar contagens no painel administrativo.
 - [x] Implementar no servidor o envio de avisos de pedidos por e-mail via Resend. A configuração e a entrega de um pedido real ainda precisam ser validadas no ambiente publicado.
 - [x] Manter produtos, pedidos, estoque e autenticação no Supabase; o MongoDB é usado apenas para métricas agregadas.
 - [x] Manter a área administrativa fora da navegação pública e protegida por autenticação.
 - [x] Definir a área atual de atendimento como Teresina/PI e região, e o prazo de retenção solicitado para pedidos encerrados como até 3 dias úteis, com tratativas abertas mantidas durante a negociação.
+- [x] Preparar a página `/assistente` para demonstração, com recuperação semântica do catálogo e políticas públicas, referências de origem e controle de acesso aos vetores.
+- [ ] Cadastrar `GEMINI_API_KEY` no Render, publicar a versão do assistente e validar perguntas reais, respostas e fontes.
+- [ ] Antes de oferecer o assistente em vendas reais, confirmar a localização do processamento externo, os termos de retenção e o mecanismo jurídico aplicável a eventual transferência internacional.
+- [ ] Confirmar um plano cujas regras de tratamento dos prompts sejam adequadas ao uso comercial e ao aviso apresentado às clientes.
 
 ### Conteúdo e regras comerciais
 
@@ -306,7 +332,7 @@ O fluxo está publicado e habilitado no GitHub, mas a consulta ao repositório e
 
 ### Domínio, hospedagem e validação final
 
-- [ ] Confirmar disponibilidade e comprar o domínio escolhido. A preferência atual é `estrelaconcept.com.br`; a extensão `.com` continua como alternativa se for mais importante manter o endereço inicialmente desejado.
+- [ ] Confirmar disponibilidade e comprar o domínio escolhido: `estrelaconcept.com`.
 - [ ] Contratar a VPS Hostinger e concluir a migração do servidor Python. Os valores promocionais e o total cobrado devem ser conferidos no carrinho antes da compra; consulte a tabela acima como referência datada.
 - [ ] Configurar domínio, HTTPS, variáveis secretas, domínio de recuperação do Supabase e remetente de e-mail no ambiente escolhido. Não publicar credenciais em arquivos do site ou no GitHub.
 - [ ] Confirmar que o domínio aponta para o deploy esperado e que o serviço usa a versão mais recente da `main`.
