@@ -149,7 +149,11 @@ class RagService:
                         f"models/{fallback_model}:generateContent"
                     )
                     return self._google(fallback_url, fallback_body)
-                logging.warning("Gemini API returned HTTP %s", error.code)
+                try:
+                    api_status = json.loads(error.read()).get("error", {}).get("status", "unknown")
+                except (json.JSONDecodeError, AttributeError):
+                    api_status = "unknown"
+                logging.warning("Gemini API returned HTTP %s (%s)", error.code, api_status)
                 raise RuntimeError("O assistente não conseguiu acessar o serviço de respostas.") from error
             except (urllib.error.URLError, TimeoutError) as error:
                 if attempt == 0:
@@ -207,7 +211,7 @@ class RagService:
             ),
             "input": user_content,
             "generation_config": {"temperature": 0.2, "max_output_tokens": 220},
-        }, fallback_model="gemini-2.5-flash")
+        }, fallback_model="gemini-3.6-flash")
         try:
             answer = result["output_text"].strip()
         except (KeyError, TypeError, AttributeError):
