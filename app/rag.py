@@ -7,10 +7,12 @@ import logging
 import os
 import re
 import time
+import unicodedata
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from html.parser import HTMLParser
+from pathlib import Path
 
 
 EMBED_MODEL = "gemini-embedding-001"
@@ -50,6 +52,76 @@ class _PolicyText(HTMLParser):
             text = re.sub(r"\s+", " ", data).strip()
             if text:
                 self.parts.append(text + " ")
+
+
+class _PolicySection(HTMLParser):
+    """Extract readable paragraphs from one public policy section."""
+
+    def __init__(self, section_id: str):
+        super().__init__()
+        self.section_id = section_id
+        self.section_depth = 0
+        self.paragraph = None
+        self.paragraphs = []
+        self.skip_paragraph = False
+
+    def handle_starttag(self, tag, attrs):
+        attributes = dict(attrs)
+        if tag == "section":
+            if not self.section_depth and attributes.get("id") == self.section_id:
+                self.section_depth = 1
+            elif self.section_depth:
+                self.section_depth += 1
+            return
+        if not self.section_depth or tag != "p":
+            return
+        self.paragraph = []
+        self.skip_paragraph = "policy-source" in attributes.get("class", "").split()
+
+    def handle_data(self, data):
+        if self.section_depth and self.paragraph is not None and not self.skip_paragraph:
+            self.paragraph.append(data)
+
+    def handle_endtag(self, tag):
+        if tag == "p" and self.paragraph is not None:
+            if not self.skip_paragraph:
+                text = re.sub(r"\s+", " ", " ".join(self.paragraph)).strip()
+                if text:
+                    self.paragraphs.append(text)
+            self.paragraph = None
+            self.skip_paragraph = False
+        elif tag == "section" and self.section_depth:
+            self.section_depth -= 1
+
+
+def _normalized_question(question: str) -> str:
+    normalized = unicodedata.normalize("NFKD", question.casefold())
+    normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+    return re.sub(r"[^a-z0-9]+", " ", normalized).strip()
+
+
+def _quick_question_kind(question: str) -> str | None:
+    normalized = _normalized_question(question)
+    if "defeito" in normalized and ("troca" in normalized or "trocar" in normalized):
+        return "defect"
+    if "entrega" in normalized and any(term in normalized for term in ("como", "funciona", "prazo", "frete")):
+        return "delivery"
+    if any(term in normalized for term in ("peca", "pecas", "produto", "produtos", "catalogo")) and any(
+        term in normalized for term in ("disponivel", "disponiveis", "estoque", "tem", "catalogo")
+    ):
+        return "catalog"
+    return None
+
+
+def _policy_paragraphs(section_id: str) -> list[str]:
+    path = Path(__file__).resolve().parent.parent / "templates" / "politicas.html"
+    parser = _PolicySection(section_id)
+    parser.feed(path.read_text(encoding="utf-8"))
+    return parser.paragraphs
+
+
+def _format_price(value) -> str:
+    return f"R$ {float(value):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
 def _chunks(text: str, source: str, limit: int = 1100) -> list[dict]:
@@ -167,11 +239,73 @@ class RagService:
         entries = [{**chunk, "embedding": embedding} for chunk, embedding in zip(chunks, embeddings)]
         return self.store.rag_replace_chunks(entries, session_token=session_token)
 
+    def _answer_quick_question(self, kind: str) -> dict:
+        if kind == "catalog":
+            available = []
+            for product in self.store.products():
+                if not isinstance(product, dict) or not product.get("active", True):
+                    continue
+                variants = product.get("variants") or []
+                in_stock = []
+                for variant in variants:
+                    if not isinstance(variant, dict) or not variant.get("active", True):
+                        continue
+                    stock = variant.get("stock")
+                    try:
+                        has_stock = stock is None or int(stock) > 0
+                    except (TypeError, ValueError):
+                        has_stock = False
+                    if has_stock:
+                        in_stock.append(variant)
+                if variants and not in_stock:
+                    continue
+                name = str(product.get("name", "Produto"))[:100]
+                item = name
+                if product.get("price") is not None:
+                    try:
+                        item += f" ({_format_price(product['price'])})"
+                    except (TypeError, ValueError, OverflowError):
+                        pass
+                options = [
+                    f"{str(variant.get('size', '')).strip()} / {str(variant.get('color', '')).strip()}".strip(" /")
+                    for variant in in_stock
+                ]
+                if options:
+                    item += f" — opções no catálogo: {', '.join(options[:8])}"
+                available.append(item)
+            if not available:
+                answer = "No momento, não encontrei peças com variações disponíveis no catálogo. Fale com a equipe pelo WhatsApp para confirmar reposições."
+            else:
+                shown = available[:12]
+                extra = f" e mais {len(available) - len(shown)}" if len(available) > len(shown) else ""
+                answer = (
+                    "Olá! Estas são as peças com opções disponíveis no catálogo: "
+                    + "; ".join(shown)
+                    + extra
+                    + ". A equipe confirma o estoque atualizado pelo WhatsApp antes de concluir o pedido."
+                )
+            return {"answer": answer, "sources": ["Catálogo de produtos"]}
+
+        section_id, paragraph_count = ("pedidos", 2) if kind == "delivery" else ("defeitos", 3)
+        paragraphs = _policy_paragraphs(section_id)
+        if not paragraphs:
+            return {
+                "answer": "Não consegui consultar esta informação agora. Fale com a equipe pelo WhatsApp para receber orientação.",
+                "sources": [],
+            }
+        return {
+            "answer": "Olá! " + " ".join(paragraphs[:paragraph_count]),
+            "sources": ["Políticas da loja"],
+        }
+
     def answer(self, question: str) -> dict:
-        if not self.configured:
-            raise RuntimeError("O assistente ainda está sendo preparado. Tente novamente mais tarde.")
         if any(pattern.search(question) for pattern in SENSITIVE_QUESTION_PATTERNS):
             raise SensitiveQuestionError("Por segurança, não envie nome, telefone, e-mail, documento ou número do pedido. Para tratar de um pedido, fale com a equipe pelo WhatsApp.")
+        quick_kind = _quick_question_kind(question)
+        if quick_kind:
+            return self._answer_quick_question(quick_kind)
+        if not self.configured:
+            raise RuntimeError("O assistente ainda está sendo preparado. Tente novamente mais tarde.")
         vector = self._embed(question, "RETRIEVAL_QUERY")
         found = self.store.rag_search(vector, limit=5, min_similarity=0.48)
         relevant = [item for item in found if float(item.get("similarity", 0)) >= 0.48]

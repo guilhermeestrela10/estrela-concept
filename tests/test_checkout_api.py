@@ -78,6 +78,32 @@ class CheckoutApiTests(unittest.TestCase):
         with response:
             return response.status, json.load(response)
 
+    def post_assistant_question(self, question):
+        body = json.dumps({"question": question}).encode("utf-8")
+        request = Request(
+            f"{self.base_url}/api/assistant/chat",
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(request, timeout=2) as response:
+            return json.load(response)
+
+    def test_assistant_suggested_questions_work_without_external_model(self):
+        IsolatedStoreHandler.assistant_attempts.clear()
+        IsolatedStoreHandler.assistant_global_attempts.clear()
+        questions = (
+            ("Quais peças estão disponíveis?", ("Camiseta Essencial", "R$")),
+            ("Como funciona a entrega?", ("Teresina/PI", "custo de entrega")),
+            ("Como faço para trocar uma peça com defeito?", ("WhatsApp", "90 dias")),
+        )
+        with patch.dict(os.environ, {"GEMINI_API_KEY": ""}):
+            for question, expected in questions:
+                with self.subTest(question=question):
+                    result = self.post_assistant_question(question)
+                    self.assertTrue(all(term in result["answer"] for term in expected))
+                    self.assertTrue(result["sources"])
+
     def post_image_upload(self, image, content_type="image/jpeg", cookie=True):
         headers = {"Content-Type": content_type}
         if cookie:
@@ -100,6 +126,7 @@ class CheckoutApiTests(unittest.TestCase):
             headers = response.headers
         self.assertEqual(status["backend"], "local")
         self.assertFalse(status["orderNotifications"])
+        self.assertTrue(status["assistantFAQAvailable"])
         self.assertEqual(headers["Cache-Control"], "no-store")
         self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
         self.assertEqual(headers["X-Frame-Options"], "DENY")

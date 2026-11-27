@@ -59,10 +59,11 @@ Quando o pedido é gravado, o servidor tenta enviar uma notificação para o e-m
 - Busca semântica em trechos do catálogo ativo e das políticas públicas; as fontes consultadas aparecem junto da resposta.
 - Os trechos e vetores ficam numa tabela privada do PostgreSQL com pgvector. A página pública não acessa o banco diretamente.
 - A administradora atualiza a base pelo painel depois de mudanças importantes. Dados de clientes e pedidos não são indexados.
-- O campo recusa formatos comuns de telefone, e-mail, documento e identificador de pedido; a página também orienta a cliente a não digitar dados pessoais. O texto da pergunta é encaminhado ao serviço de respostas, então a política já explica esse uso.
+- As três perguntas sugeridas sobre catálogo, entrega e defeitos recebem respostas rápidas baseadas no catálogo atual e no texto publicado das políticas. Elas não aguardam a geração externa; perguntas livres continuam usando busca semântica e geração de resposta.
+- O campo recusa formatos comuns de telefone, e-mail, documento e identificador de pedido; a página também orienta a cliente a não digitar dados pessoais. Perguntas livres são encaminhadas ao serviço de respostas, conforme explicado na política pública.
 - Perguntas curtas, limite de consultas e resposta alternativa pelo WhatsApp ajudam a controlar custos e a evitar informações inventadas.
 - A política pública informa que a localização do processamento externo e o mecanismo de transferência internacional ainda devem ser confirmados antes do uso comercial. As condições de uso de dados do serviço de respostas variam conforme o plano; confira a [página oficial de uso e preços](https://ai.google.dev/gemini-api/docs/pricing) ao configurar a chave.
-- **Ativação pendente:** cadastre `GEMINI_API_KEY` nas variáveis do Render. Sem essa chave, a página informa que o atendimento assistido está sendo preparado; loja, sacola, pedidos e painel continuam operando normalmente.
+- As respostas rápidas sobre catálogo, entrega e defeitos funcionam mesmo sem `GEMINI_API_KEY`. Perguntas livres dependem dessa chave privada no ambiente do servidor; confira `assistantConfigured` em `/api/status` sem revelar o valor da chave.
 
 ## Como funciona
 
@@ -292,7 +293,8 @@ O site está pronto para demonstração. Os itens abaixo precisam ser concluído
 - [x] Manter a área administrativa fora da navegação pública e protegida por autenticação.
 - [x] Definir a área atual de atendimento como Teresina/PI e região, e o prazo de retenção solicitado para pedidos encerrados como até 3 dias úteis, com tratativas abertas mantidas durante a negociação.
 - [x] Preparar a página `/assistente` para demonstração, com recuperação semântica do catálogo e políticas públicas, referências de origem e controle de acesso aos vetores.
-- [ ] Cadastrar `GEMINI_API_KEY` no Render, publicar a versão do assistente e validar perguntas reais, respostas e fontes.
+- [x] Configurar `GEMINI_API_KEY` no ambiente publicado e validar que perguntas livres podem usar o serviço de respostas.
+- [ ] Publicar e validar no ambiente publicado as respostas rápidas de catálogo, entrega e troca por defeito.
 - [ ] Antes de oferecer o assistente em vendas reais, confirmar a localização do processamento externo, os termos de retenção e o mecanismo jurídico aplicável a eventual transferência internacional.
 - [ ] Confirmar um plano cujas regras de tratamento dos prompts sejam adequadas ao uso comercial e ao aviso apresentado às clientes.
 

@@ -22,6 +22,10 @@ fetch("/api/status").then(response => response.json()).then(result => {
     status.textContent = "Atendimento disponível. As respostas são baseadas nas informações públicas da loja.";
     return;
   }
+  if (result.assistantFAQAvailable === true) {
+    status.textContent = "Perguntas rápidas sobre catálogo, entrega e peças com defeito estão disponíveis. Para outras dúvidas, fale com a equipe pelo WhatsApp.";
+    return;
+  }
   status.textContent = "O atendimento assistido está sendo preparado. Enquanto isso, nossa equipe atende pelo WhatsApp.";
   status.classList.add("error");
   question.disabled = true;

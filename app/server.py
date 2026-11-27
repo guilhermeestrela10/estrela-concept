@@ -298,6 +298,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
                 "backend": "online" if isinstance(self.get_store(), SupabaseStore) else "local",
                 "orderNotifications": email_notifications_configured(),
                 "assistantConfigured": bool(os.environ.get("GEMINI_API_KEY", "").strip()),
+                "assistantFAQAvailable": True,
             })
             return
         if path == "/api/admin/session":
